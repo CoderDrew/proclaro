@@ -113,7 +113,7 @@ The tracker records outcomes besides "awarded": not awarded because the bids wer
 - **Wrong form:** a bid not submitted on the solicitation's own bid form is non-responsive. One bidder in the example was rejected for this alone. The real forms carry the RFB number and "Page X of Y" in the footer, which gives a check something reliable to anchor on.
 - **Rejection grounds named by the contact:** a missing required signature; an invalid amount written in words; certain failures to acknowledge addenda. The addendum text says failing to acknowledge "may subject" a bidder to disqualification, so it's discretionary.
 - **Residency preference:** 5% is added to non-resident totals before comparing. The resident certificate must be valid (it has a granted date and an expiration date).
-- **Bond rule on the intake form:** "Any bid over $150,000 a Bid Bond is Required by Statute. Bids $50,000 up to 149,999 it is at the discretion of the Bidding Agency." The same wording applies to the performance and payment bond. (This conflicts with a decision already in the log; see 3.)
+- **Bond rule on the intake form:** "Any bid over $150,000 a Bid Bond is Required by Statute. Bids $50,000 up to 149,999 it is at the discretion of the Bidding Agency." The same wording applies to the performance and payment bond. (Proclaro uses the project estimate instead; see `decisions.md`.)
 - **Bid bond:** included in the bid or uploaded separately on the platform.
 
 ### 1.6 Post-award bond package
@@ -144,7 +144,7 @@ Ranked by evidence and fit, not by how big the pain is.
 
 ## 3. Open questions
 
-1. **Bond threshold:** the intake form says the statute applies to a *bid* over $150,000, with discretion between $50,000 and $149,999. The decision log says the *project estimate* at $150,000 or more. Which one does the system enforce, and what happens when the estimate and the bid fall on opposite sides of the line?
+1. ~~Bond threshold~~ Resolved: the project estimate, $150,000 or more (see `decisions.md`).
 2. **Bidder access before close:** the contact says bidders can't reopen what they submitted, but the RFB lets them modify or withdraw before opening. Does modifying mean a full replacement upload?
 3. **What happens during the responsiveness review**, and which defects are waived or fixable rather than disqualifying? Is the bid-bond cure period (5 p.m. the next business day) the only cure?
 4. **How is "responsible" determined** by the requesting agency? Are qualifications, references and current work scored or just read?
