@@ -31,6 +31,16 @@ Other scripts: `db:reset`, `db:test`, and `db:types` (regenerates `src/lib/supab
 
 The two procurement users can each act as reviewer or checker, but never both on the same solicitation.
 
+## Invited users
+
+Self-signup is off (`enable_signup = false`). An admin invites staff from `/admin/users`, and each invited user signs in for the first time like this:
+
+1. The invite email (template `supabase/templates/invite.html`) links to `/auth/confirm?token_hash=...&type=invite`.
+2. `/auth/confirm` verifies the one-time token on the server with `@supabase/ssr` (`verifyOtp`). That sets the session cookies and sends the user to `/auth/set-password`.
+3. `/auth/set-password` is open only to an invited user whose current session came from that link. After they choose a password (at least 8 characters), they land on their home page. From then on they sign in at `/login`.
+
+Locally, the invite email lands in Mailpit at http://127.0.0.1:54324. The invite link points at `SITE_URL` (`.env.local`, default `http://127.0.0.1:3000`), so set `SITE_URL` when the dev server runs on another port. `additional_redirect_urls` in `supabase/config.toml` allows `/auth/confirm` on any local port. After changing `config.toml` or the template, restart the stack (`npx supabase stop`, then `npm run db:start`).
+
 ## Tour of the solicitation-setup slice
 
 1. **`/agency`**: an agency author starts a draft, fills in the solicitation (autosaved), uploads attachments, previews the RFB and bid form as drafts, and submits it for office review. Problems block submission; warnings must be acknowledged.

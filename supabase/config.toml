@@ -165,7 +165,15 @@ site_url = "http://127.0.0.1:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# The invite redirectTo (src/app/auth/logic.ts inviteRedirectUrl) must be listed here, or the auth
+# server falls back to site_url and the invite link loses its /auth/confirm path. Any local port is
+# allowed so a second dev server (another worktree, say) can run the invite flow. Local only: a
+# hosted project lists its one real origin instead.
+additional_redirect_urls = [
+  "https://127.0.0.1:3000",
+  "http://127.0.0.1:*/auth/confirm",
+  "http://localhost:*/auth/confirm",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -252,10 +260,11 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+# Invite email links to the app's /auth/confirm route with a token hash, which the server verifies
+# with @supabase/ssr (no tokens in a URL fragment). Path is relative to the project root.
+[auth.email.template.invite]
+subject = "You have been invited to Proclaro"
+content_path = "./supabase/templates/invite.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]

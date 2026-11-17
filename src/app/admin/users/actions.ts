@@ -5,6 +5,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runAdmin } from "../actions-shared";
 import type { AdminResult } from "../common";
+import { inviteRedirectUrl } from "@/app/auth/logic";
 import * as logic from "./logic";
 
 export async function createUser(formData: FormData): Promise<AdminResult> {
@@ -26,7 +27,11 @@ export async function createUser(formData: FormData): Promise<AdminResult> {
           return !!data;
         },
         async invite(email, displayName) {
-          const { data, error } = await admin.auth.admin.inviteUserByEmail(email, { data: { display_name: displayName } });
+          const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+            data: { display_name: displayName },
+            // The invite email links here (supabase/templates/invite.html); must be allow-listed in config.toml.
+            redirectTo: inviteRedirectUrl(process.env.SITE_URL),
+          });
           if (error || !data.user) return { error: error?.message ?? "invite failed" };
           return { userId: data.user.id };
         },
