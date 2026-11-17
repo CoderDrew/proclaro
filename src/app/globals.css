@@ -1,0 +1,77 @@
+:root {
+  color-scheme: light;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #1a1a1a;
+  background: #fff;
+}
+a {
+  color: #0b4f8a;
+}
+h1 {
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+label {
+  display: grid;
+  gap: 2px;
+}
+input {
+  padding: 4px 6px;
+  font: inherit;
+}
+button {
+  padding: 4px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+.error {
+  color: #a00;
+  margin: 0;
+}
+.shell-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #ccc;
+  background: #f4f4f4;
+}
+.shell-header form {
+  margin: 0;
+}
+.spacer {
+  flex: 1;
+}
+.shell-body {
+  padding: 16px;
+}
+
+/* Agency solicitation form */
+.sol-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 24px; align-items: start; }
+.sol-form fieldset { margin: 0 0 16px; padding: 8px 12px 12px; border: 1px solid #ccc; }
+.sol-form legend { font-weight: 600; padding: 0 4px; }
+.sol-form .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px 12px; }
+.sol-form .wide { grid-column: 1 / -1; }
+.sol-form textarea { width: 100%; font: inherit; padding: 4px 6px; min-height: 70px; }
+.sol-form .row { display: flex; gap: 8px; align-items: center; margin: 4px 0; flex-wrap: wrap; }
+.sol-form label.inline { display: flex; gap: 4px; align-items: center; }
+.sol-side { position: sticky; top: 8px; display: grid; gap: 12px; font-size: 13px; }
+.sol-side section { border: 1px solid #ccc; padding: 8px 12px; }
+.sol-side h2 { font-size: 14px; margin: 0 0 6px; }
+.issues { margin: 2px 0 0; padding-left: 16px; font-size: 12px; }
+.issues-error { color: #a00; }
+.issues-warning { color: #7a5200; }
+.issues button { margin-left: 8px; padding: 0 6px; }
+.field-comment { background: #fff6d6; border-left: 3px solid #c9a000; padding: 2px 6px; font-size: 12px; margin-top: 2px; }
+.attachment-slot { margin: 6px 0 10px; }
+.status-pill { display: inline-block; padding: 0 8px; border: 1px solid #999; border-radius: 10px; font-size: 12px; }
+table.list { border-collapse: collapse; width: 100%; }
+table.list th, table.list td { text-align: left; padding: 4px 8px; border-bottom: 1px solid #ddd; }

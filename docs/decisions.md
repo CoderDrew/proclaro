@@ -75,7 +75,7 @@ Details and evidence: `docs/discovery.md`.
 - *(Resolved by "Roles adopted" below.)* **Roles and review flow are under review.** The real process involves two organizations. A central procurement office decides whether each bid is accepted (responsive), and the requesting agency picks the award from the accepted bids. The single-agency Creator/Reviewer/Approver model above is on hold until the real steps are mapped.
 - **No deadline override, for anyone.** In the real example, a project manager was willing to accept a late bid and procurement refused. The system offers no override path.
 - **Sealed bids include the bidder.** After submitting, a bidder can't view their submission until close.
-- **Bond threshold confirmed: the project estimate, $150,000 or more.** This is set on the solicitation when it's created, not evaluated per bid. The real intake form words the statute as "any bid over $150,000"; Drew confirmed the estimate-based rule for Proclaro.
+- **Bond threshold confirmed: the project estimate, $150,000 or more.** This is set on the solicitation when it's created, not evaluated per bid. The real intake form ties the statutory requirement to the bid amount instead; Drew confirmed the estimate-based rule for Proclaro.
 - **Document checks must work on scanned images.** Most real bids are scans with handwriting and no text layer.
 - **Post-award bond package.** The package is:
   - the original performance and payment bond, notarized for both principal and surety, left undated so the agency can date it after the contract is signed;
@@ -115,6 +115,29 @@ These replace the original Roles and Review flow entries.
 - **One-reviewer fallback, recorded.** If no checker is available, the reviewer may post alone but must choose "no second reviewer available". That is stamped on the record and the audit log, so how often it happens can be counted.
 - **Disagreement goes back to the reviewer.** If the checker disagrees, the item returns to the reviewer. The checker doesn't override.
 - **No Approver role in the office.** The award decision belongs to the agency author. The system computes the expected award (lowest after the preference) and shows when the agency's pick differs.
+
+## 2026-11-17 — Solicitation setup slice, as built
+
+Covers the path from an agency drafting a solicitation to a public listing: agency drafting and submitting (`/agency`), office review with the two-person check and the recorded single-reviewer fallback (`/office`), PDF preview, publishing, the public listing (`/solicitations`), and admin (`/admin`). Bids, bidders and everything after publication are not part of it. Design and plan: `docs/superpowers/`.
+
+Decisions made during the build:
+
+- **Published files are keyed by the solicitation's uuid, not its number.** Objects live at `solicitations/{id}/v1/...` in the `published` bucket, which matches the storage policy that decides who can read them.
+- **Publish validation uses the latest submission date, plus a separate release-date check.** The rules are re-validated at send-to-check against the latest submission date, and a second check rejects a release date that has already passed. Using today as the submission date would have demanded a release date three days out, which contradicts the rule that only a passed date blocks publishing.
+- **Attachments are copied into the published bucket at publish.** The attachments bucket is closed to the public and to the agency once published, so each attachment is copied to `solicitations/{id}/v1/attachments/` and the snapshot records the new paths. The published file set is immutable along with the row.
+- **The published bucket is private, with release-gated reads.** Reads are allowed only when the solicitation is published and its release date has arrived (or for office staff). Public pages serve files through short-lived signed URLs created with the visitor's own client, so there is no public bucket URL.
+- **The preview uses clause locks.** Sending to check (or approving alone) locks the clauses, so drafts and previews show the clause text that will be published.
+- **The admin client is confined to user invites.** Everything else, including all other admin screens, runs under the signed-in admin's own session and row-level security. The invite path also uses it to check whether a profile exists and to remove a half-created auth user, so cleanup can never delete an existing user whom row-level security hides from an agency-organization admin.
+- **Admin changes are not audited.** The spec's audit list (§7.8) covers the solicitation workflow only: every state change, every field edit after submission (old value, new value and reason), every comment, every fallback approval and every publish, each with who and when. So users, organizations, clauses, holidays and settings are not logged.
+- **An approved solicitation can be reopened to correct its dates.** The reviewer or checker can move an approved solicitation back to review with a recorded reason (`reopen_review`). That clears the checker, the single-reviewer flag and the clause locks, so it needs a fresh check (or approval alone) before publishing. This is the remedy the design names for a release date that passes before publishing. Send to check and approve alone also refuse a release date that has already passed, so a stale date can't be approved in the first place.
+- **The release date comes before the other dates.** A release date on or after the questions-due date is an error. An advertisement that starts before the release date is a warning to acknowledge, because advertising may legitimately start before the posting.
+- **Publishing pins its file paths and recomputes the bid due time.** `publish_solicitation` accepts only `solicitations/{id}/v1/rfb.pdf` and `.../bid-form.pdf` for that row, and recomputes `bid_due_at` from the bid due date and time in the configured time zone. A caller value that differs is rejected, so a disagreement between the app and the database shows up instead of being silently replaced. Uploads to the `published` bucket are limited to office staff, versioned solicitation paths, and solicitations that are approved.
+- **The same-person rule spans reassignment.** Nobody who was a reviewer in the current review round can check it. A round starts at the latest submission or reopen, and the round's reviewers are read from the audit log.
+
+### Known gaps
+
+- **Invited users cannot sign in yet.** Login is email and password only. There is no invite-link or set-password flow, so a user created from `/admin/users` has no way to set a password. Only the seeded users can sign in locally.
+- **Public visibility of released rows is verified only by database tests.** A published row stays hidden from signed-out visitors until its release date, which must be at least three days after submission. End to end, that could only be checked by waiting or by backdating timestamps, and neither was done. The pgTAP tests in `supabase/tests/rls.test.sql` cover signed-out access to released and unreleased rows and files.
 
 ## Open questions
 

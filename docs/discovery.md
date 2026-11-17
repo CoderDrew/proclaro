@@ -90,7 +90,7 @@ The tracker records outcomes besides "awarded": not awarded because the bids wer
 **Recap/award spreadsheet**
 
 - One column per accepted bidder.
-- Rows: resident yes/no; addenda acknowledged; bid bond yes/no; each line item; total base bid; "+5% preference" (added to *non-resident* totals); adjusted total.
+- Rows: resident yes/no; addenda acknowledged; bid bond yes/no; each line item; total base bid; a residency preference percentage (added to *non-resident* totals); adjusted total.
 
 **Tracker (one row per solicitation)**
 
@@ -102,18 +102,18 @@ The tracker records outcomes besides "awarded": not awarded because the bids wer
 
 ### 1.4 Evidence of the pain points
 
-- **Transcription error in a published document.** On the winning bid form, the figures, the words and the arithmetic all agreed. When staff typed it into the recap, one line item was entered $3 too high, so the published recap and award both showed the wrong total. The letter of intent and the bond used the correct amount. A typing error made it into two public documents.
-- **Inconsistent solicitation documents.** Two addenda revise the bid due date in their header while their body says "the bid opening time and date will not be modified by this addendum". The Q&A answer date in an addendum differs from the one on the intake form.
-- **Most bids are scanned images.** Of the eight accepted bids, several have no text layer at all, and the winning bid is a scan with handwritten checkmarks and signatures. Any automated document check needs vision/OCR; plain text extraction isn't enough.
-- **Bidders upload only the pages they filled in** (the winning bid was 9 pages of a 24-page RFB), and in no consistent order.
+- **Transcription error in a published document.** On the winning bid form, the figures, the words and the arithmetic all agreed. When staff retyped it into the recap, one line item was entered slightly too high, so the published recap and award both showed the wrong total, while the letter of intent and the bond used the correct amount. A typing error made it into two public documents.
+- **Inconsistent solicitation documents.** Some addenda show a revised bid due date in their header while their body states that the bid opening date and time are unchanged. The Q&A answer date in an addendum differs from the one on the intake form.
+- **Most bids are scanned images.** Many of the accepted bids have no text layer at all, and the winning bid is a scan with handwritten checkmarks and signatures. Any automated document check needs vision/OCR; plain text extraction isn't enough.
+- **Bidders upload only the pages they filled in** (the winning bid was a small fraction of the RFB's pages), and in no consistent order.
 
 ### 1.5 Rules observed
 
 - **Deadline:** an upload that isn't complete when the platform locks is non-responsive. No exceptions.
-- **Wrong form:** a bid not submitted on the solicitation's own bid form is non-responsive. One bidder in the example was rejected for this alone. The real forms carry the RFB number and "Page X of Y" in the footer, which gives a check something reliable to anchor on.
-- **Rejection grounds named by the contact:** a missing required signature; an invalid amount written in words; certain failures to acknowledge addenda. The addendum text says failing to acknowledge "may subject" a bidder to disqualification, so it's discretionary.
-- **Residency preference:** 5% is added to non-resident totals before comparing. The resident certificate must be valid (it has a granted date and an expiration date).
-- **Bond rule on the intake form:** "Any bid over $150,000 a Bid Bond is Required by Statute. Bids $50,000 up to 149,999 it is at the discretion of the Bidding Agency." The same wording applies to the performance and payment bond. (Proclaro uses the project estimate instead; see `decisions.md`.)
+- **Wrong form:** a bid not submitted on the solicitation's own bid form is non-responsive. A bidder in the example was rejected for this alone. The real forms carry the RFB number and "Page X of Y" in the footer, which gives a check something reliable to anchor on.
+- **Rejection grounds named by the contact:** a missing required signature; an invalid amount written in words; certain failures to acknowledge addenda. The addendum wording makes disqualification for a missing acknowledgment possible rather than automatic, so it's discretionary.
+- **Residency preference:** a fixed percentage is added to non-resident totals before comparing. The resident certificate must be valid (it has a granted date and an expiration date).
+- **Bond rule on the intake form:** the form ties the bid bond to the bid amount: required by statute above the bond threshold, and at the agency's discretion in the band just below it. The performance and payment bond is described the same way. (Proclaro uses the project estimate instead; see `decisions.md`.)
 - **Bid bond:** included in the bid or uploaded separately on the platform.
 
 ### 1.6 Post-award bond package
