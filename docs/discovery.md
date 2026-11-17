@@ -127,6 +127,21 @@ The tracker records outcomes besides "awarded": not awarded because the bids wer
 - The bond goes to the state's legal office for approval as to form, then back to the agency signed. Change orders require a bond rider that goes through the same steps.
 - Delivered directly to the requesting agency: insurance (including builder's risk), a workers' compensation certificate of good standing, an unemployment insurance certificate of good standing, and the same for each subcontractor before they start work.
 
+### 1.7 Answers from the procurement office (2026-11-16)
+
+- **Second-person check.** A second staff member checks the bid review, and wherever possible a second person checks everything.
+- **Hard rejections.** Beyond a late upload, the wrong form and a missing signature, there are no other grounds she can think of; there may be rare edge cases. The bid-bond cure is the only fix allowed after close.
+- **Missing addendum acknowledgment.** The office still *accepts* the bid but leaves it to the requesting agency to accept or reject it. This is a third outcome: accepted, but flagged for the agency.
+- **Amount in words vs. figures.** It has never come up. In other situations the office has gone with the figures, even though the RFB says the words govern. There is no settled rule.
+- **Replacement before close.** A bidder can upload a replacement before close.
+- **Separately uploaded bid bonds.** It just depends on the bidder.
+- **The agency can't dispute the accepted list**, and the office doesn't check the agency's award pick against the recap.
+- **All bids over budget.** The office issues a memo saying all bids are rejected as over budget.
+- **Resident certificates are verified.**
+- **Ties** have probably never happened; it would be up to the agency.
+- **The posted recap is the only public disclosure.** There's no public opening or reading.
+- **Solicitation authoring.** The procurement office maintains the templates, the agency fills them in, and the office reviews the result before posting.
+
 ---
 
 ## 2. Proposed (not decided)
@@ -139,14 +154,27 @@ Ranked by evidence and fit, not by how big the pain is.
 4. **Structured solicitation setup.** The intake form fields, the date rules (bid due ≥ 5 days after answers due; 3-day lead time; 2-week ad period), the value-band requirements and the bid schedule definition. This is the data the checks in items 1–3 need, and it catches inconsistent dates at the source.
 5. *(Out of scope for v1.)* **Post-award bond tracking.** A 20-day clock, the package checklist, a name match against registration data, the dating-after-contract step, legal approval, and riders.
 6. **Full solicitation document authoring and validation.** Template-driven generation and an AI consistency check of the narrative documents. This is the contact's biggest frustration, but it's also the largest build. Item 4 delivers the structured part of it.
+7. **Roles model based on the answers in 1.7.**
+
+   | Role | Organization | Does |
+   |---|---|---|
+   | Bidder | Vendor | Submits and replaces bids before close |
+   | Agency author | Requesting agency | Fills in the solicitation; decides on flagged bids and ties; picks the award |
+   | Procurement reviewer | Procurement office | Reviews the solicitation before posting; reviews bids; prepares the recap and award |
+   | Procurement checker | Procurement office | A second person who confirms the reviewer's work before anything is posted; never the same person as the reviewer |
+   | Admin | Procurement office | Templates, users, holiday calendar |
+
+8. **The system computes the expected award** (lowest after the preference, with ties flagged) and shows when the agency's pick differs. Today nobody checks this.
+9. **Words-vs-figures mismatches are flagged, never resolved automatically.** There's no settled rule, so a person decides and the reason is logged.
 
 ---
 
 ## 3. Open questions
 
 1. ~~Bond threshold~~ Resolved: the project estimate, $150,000 or more (see `decisions.md`).
-2. **Bidder access before close:** the contact says bidders can't reopen what they submitted, but the RFB lets them modify or withdraw before opening. Does modifying mean a full replacement upload?
-3. **What happens during the responsiveness review**, and which defects are waived or fixable rather than disqualifying? Is the bid-bond cure period (5 p.m. the next business day) the only cure?
+2. ~~Bidder access before close~~ Resolved: a replacement upload is allowed before close (1.7). Assumed: the latest version counts.
+3. ~~Fixable vs. disqualifying~~ Resolved (1.7).
 4. **How is "responsible" determined** by the requesting agency? Are qualifications, references and current work scored or just read?
-5. **Who drafts, reviews, approves and publishes** the solicitation documents, and is there a required approval before publication?
+5. ~~Who drafts and approves solicitations~~ Resolved (1.7). Still unknown: what the office checks when it reviews a solicitation before posting.
 6. **Is the shared drive the official record**, or only a working copy? What are the retention requirements?
+7. **Who checks the checker's work on the recap** when only one person is available? ("If possible" suggests the second check is sometimes skipped.)

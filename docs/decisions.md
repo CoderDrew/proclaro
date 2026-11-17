@@ -87,6 +87,20 @@ Details and evidence: `docs/discovery.md`.
 - **v1 ends at award publication.** Everything after award is out of scope for v1: the performance and payment bond, the bond package, legal approval and contract execution. The post-award bond notes above are kept as reference for later. The **bid bond** is submitted with the bid, so checking it at review stays in v1.
 - **A bid not on the solicitation's own bid form is non-responsive.** This is confirmed by a real rejection.
 
+## 2026-11-16 — Confirmed by the procurement office
+
+- **Bid outcomes at review:**
+  - **Accepted.**
+  - **Accepted, flagged for the agency** (for example, a missing addendum acknowledgment). The agency decides whether to accept or reject it.
+  - **Non-responsive.** Only for a late upload, the wrong form, a missing signature, or a bid bond still missing after the cure deadline.
+- **The bid-bond cure is the only fix allowed after close.**
+- **A bidder can replace their bid before close.** The latest version counts (assumed).
+- **A mismatch between words and figures is flagged for a person to decide**, with the reason logged. There's no settled rule.
+- **All bids over budget ends in an "all bids rejected" outcome**, published as a memo.
+- **The posted recap is the only public disclosure**; there is no public opening.
+- **Ties go to the agency to decide.**
+- **The roles model is still pending.** The proposed version is in `docs/discovery.md` §2. Its premise is confirmed: the office has a reviewer and a separate second-person checker.
+
 ## Open questions
 
 See `docs/discovery.md` §3.
