@@ -84,6 +84,8 @@ Details and evidence: `docs/discovery.md`.
 
   The bidder's name must exactly match the business registration record. A mismatch sends the bond back for correction, not disqualification.
 - **The recap lists only accepted bids.** Accepted is a separate state from awarded.
+- **v1 ends at award publication.** Everything after award is out of scope for v1: the performance and payment bond, the bond package, legal approval and contract execution. The post-award bond notes above are kept as reference for later. The **bid bond** is submitted with the bid, so checking it at review stays in v1.
+- **A bid not on the solicitation's own bid form is non-responsive.** This is confirmed by a real rejection.
 
 ## Open questions
 

@@ -110,6 +110,7 @@ The tracker records outcomes besides "awarded": not awarded because the bids wer
 ### 1.5 Rules observed
 
 - **Deadline:** an upload that isn't complete when the platform locks is non-responsive. No exceptions.
+- **Wrong form:** a bid not submitted on the solicitation's own bid form is non-responsive. One bidder in the example was rejected for this alone. The real forms carry the RFB number and "Page X of Y" in the footer, which gives a check something reliable to anchor on.
 - **Rejection grounds named by the contact:** a missing required signature; an invalid amount written in words; certain failures to acknowledge addenda. The addendum text says failing to acknowledge "may subject" a bidder to disqualification, so it's discretionary.
 - **Residency preference:** 5% is added to non-resident totals before comparing. The resident certificate must be valid (it has a granted date and an expiration date).
 - **Bond rule on the intake form:** "Any bid over $150,000 a Bid Bond is Required by Statute. Bids $50,000 up to 149,999 it is at the discretion of the Bidding Agency." The same wording applies to the performance and payment bond. (This conflicts with a decision already in the log; see 3.)
@@ -136,7 +137,7 @@ Ranked by evidence and fit, not by how big the pain is.
 2. **Sealed submission with enforced close.** No staff override of the deadline, plus an audit log. Bonds are attached to the bid record, not uploaded separately.
 3. **Document checks on scanned bid forms.** The AI reads signatures, amounts in words, addenda numbers and checkmarks from scans and cites the page; rules then compare the extracted values (words = figures, sum of line items = total, all addenda listed, resident certificate valid on the due date). The value is highest where bids are paper scans, which is most of them.
 4. **Structured solicitation setup.** The intake form fields, the date rules (bid due ≥ 5 days after answers due; 3-day lead time; 2-week ad period), the value-band requirements and the bid schedule definition. This is the data the checks in items 1–3 need, and it catches inconsistent dates at the source.
-5. **Post-award bond tracking.** A 20-day clock, the package checklist, a name match against registration data, the dating-after-contract step, legal approval, and riders.
+5. *(Out of scope for v1.)* **Post-award bond tracking.** A 20-day clock, the package checklist, a name match against registration data, the dating-after-contract step, legal approval, and riders.
 6. **Full solicitation document authoring and validation.** Template-driven generation and an AI consistency check of the narrative documents. This is the contact's biggest frustration, but it's also the largest build. Item 4 delivers the structured part of it.
 
 ---
@@ -146,8 +147,6 @@ Ranked by evidence and fit, not by how big the pain is.
 1. **Bond threshold:** the intake form says the statute applies to a *bid* over $150,000, with discretion between $50,000 and $149,999. The decision log says the *project estimate* at $150,000 or more. Which one does the system enforce, and what happens when the estimate and the bid fall on opposite sides of the line?
 2. **Bidder access before close:** the contact says bidders can't reopen what they submitted, but the RFB lets them modify or withdraw before opening. Does modifying mean a full replacement upload?
 3. **What happens during the responsiveness review**, and which defects are waived or fixable rather than disqualifying? Is the bid-bond cure period (5 p.m. the next business day) the only cure?
-4. **Why was one bidder in the example marked non-responsive?** (The file is a scan with no text layer, so the reason isn't readable.)
-5. **How is "responsible" determined** by the requesting agency? Are qualifications, references and current work scored or just read?
-6. **Who drafts, reviews, approves and publishes** the solicitation documents, and is there a required approval before publication?
-7. **What happens between the letter of intent and the signed contract** (negotiation, contracts staff)?
-8. **Is the shared drive the official record**, or only a working copy? What are the retention requirements?
+4. **How is "responsible" determined** by the requesting agency? Are qualifications, references and current work scored or just read?
+5. **Who drafts, reviews, approves and publishes** the solicitation documents, and is there a required approval before publication?
+6. **Is the shared drive the official record**, or only a working copy? What are the retention requirements?
