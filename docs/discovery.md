@@ -156,7 +156,7 @@ Ranked by evidence and fit, not by how big the pain is.
 4. **Structured solicitation setup.** The intake form fields, the date rules (bid due ≥ 5 days after answers due; 3-day lead time; 2-week ad period), the value-band requirements and the bid schedule definition. This is the data the checks in items 1–3 need, and it catches inconsistent dates at the source.
 5. *(Out of scope for v1.)* **Post-award bond tracking.** A 20-day clock, the package checklist, a name match against registration data, the dating-after-contract step, legal approval, and riders.
 6. **Full solicitation document authoring and validation.** Template-driven generation and an AI consistency check of the narrative documents. This is the contact's biggest frustration, but it's also the largest build. Item 4 delivers the structured part of it.
-7. **Roles model based on the answers in 1.7.**
+7. *(Adopted 2026-11-16, with a recorded one-reviewer fallback; see `decisions.md`.)* **Roles model based on the answers in 1.7.**
 
    | Role | Organization | Does |
    |---|---|---|
@@ -179,4 +179,4 @@ Ranked by evidence and fit, not by how big the pain is.
 4. **How is "responsible" determined** by the requesting agency? Are qualifications, references and current work scored or just read?
 5. ~~Who drafts and approves solicitations~~ Resolved (1.7): the office checks the whole document. A field-level checklist would help design the setup validation, but it isn't blocking.
 6. **Is the shared drive the official record**, or only a working copy? What are the retention requirements?
-7. ~~Is the second check always done~~ Resolved (1.7): no. Open product decision: should the system require two people, or allow one reviewer with the gap recorded?
+7. ~~Is the second check always done~~ Resolved (1.7): no. Decided: two people by default, with a recorded one-reviewer fallback.

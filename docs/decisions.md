@@ -6,8 +6,8 @@
 - **Fictional agency:** Workflow modeled on a real state agency process, but no real names, branding, bidder data or documents in the repo.
 - **v1 scope: RFBs only.** RFPs (weighted scoring, evaluation committees) deferred to phase 2.
 - **Sealed bids:** No agency user — and no AI process — can see bid contents before the official close/opening time.
-- **Roles:** Bidder, Creator, Reviewer, Approver, Admin. The same person cannot review and approve the same solicitation; enforced by the system.
-- **Review flow:** Reviewer checks each bid against requirements; Approver signs off. Bids meeting requirements go forward to award; others are marked non-responsive with a recorded reason. Disagreement sends the bid back to the Reviewer rather than the Approver overriding.
+- *(Superseded by "Roles adopted" below.)* **Roles:** Bidder, Creator, Reviewer, Approver, Admin. The same person cannot review and approve the same solicitation; enforced by the system.
+- *(Superseded by "Roles adopted" below.)* **Review flow:** Reviewer checks each bid against requirements; Approver signs off. Bids meeting requirements go forward to award; others are marked non-responsive with a recorded reason. Disagreement sends the bid back to the Reviewer rather than the Approver overriding.
 - **AI compliance check is advisory only.** It never rejects a bid. Reviewer confirms or overrides each item; overrides are logged with a reason.
 - **Two check types:** Structured fields are checked by deterministic rules (no AI). Uploaded documents are checked by the AI. The checklist shows which method verified each item.
 - **AI output:** met / not met / unclear, with evidence (document, page, excerpt). No confidence scores — self-reported model confidence is poorly calibrated and invites over-trust.
@@ -72,7 +72,7 @@ Real reference documents are kept locally in `source-docs/`, which is git-ignore
 
 Details and evidence: `docs/discovery.md`.
 
-- **Roles and review flow are under review.** The real process involves two organizations. A central procurement office decides whether each bid is accepted (responsive), and the requesting agency picks the award from the accepted bids. The single-agency Creator/Reviewer/Approver model above is on hold until the real steps are mapped.
+- *(Resolved by "Roles adopted" below.)* **Roles and review flow are under review.** The real process involves two organizations. A central procurement office decides whether each bid is accepted (responsive), and the requesting agency picks the award from the accepted bids. The single-agency Creator/Reviewer/Approver model above is on hold until the real steps are mapped.
 - **No deadline override, for anyone.** In the real example, a project manager was willing to accept a late bid and procurement refused. The system offers no override path.
 - **Sealed bids include the bidder.** After submitting, a bidder can't view their submission until close.
 - **Bond threshold confirmed: the project estimate, $150,000 or more.** This is set on the solicitation when it's created, not evaluated per bid. The real intake form words the statute as "any bid over $150,000"; Drew confirmed the estimate-based rule for Proclaro.
@@ -99,7 +99,22 @@ Details and evidence: `docs/discovery.md`.
 - **All bids over budget ends in an "all bids rejected" outcome**, published as a memo.
 - **The posted recap is the only public disclosure**; there is no public opening.
 - **Ties go to the agency to decide.**
-- **The roles model is still pending.** The proposed version is in `docs/discovery.md` §2. Its premise is confirmed: the office has a reviewer and a separate second-person checker.
+## 2026-11-16 — Roles adopted
+
+These replace the original Roles and Review flow entries.
+
+| Role | Organization | Does |
+|---|---|---|
+| Bidder | Vendor | Submits and replaces bids before close |
+| Agency author | Requesting agency | Fills in the solicitation; decides on flagged bids and ties; picks the award |
+| Procurement reviewer | Procurement office | Reviews the solicitation before posting; reviews bids; prepares the recap and award |
+| Procurement checker | Procurement office | A second person who confirms the reviewer's work before anything is posted |
+| Admin | Procurement office | Templates, users, holiday calendar |
+
+- **Two-person check by default.** Posting a solicitation, recap or award needs a reviewer and a checker. The system blocks the same person from filling both roles on the same item.
+- **One-reviewer fallback, recorded.** If no checker is available, the reviewer may post alone but must choose "no second reviewer available". That is stamped on the record and the audit log, so how often it happens can be counted.
+- **Disagreement goes back to the reviewer.** If the checker disagrees, the item returns to the reviewer. The checker doesn't override.
+- **No Approver role in the office.** The award decision belongs to the agency author. The system computes the expected award (lowest after the preference) and shows when the agency's pick differs.
 
 ## Open questions
 
