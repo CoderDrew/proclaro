@@ -141,6 +141,11 @@ Decisions made during the build:
 - **An expired invitation cannot be re-sent, and there is no password reset.** Invite links expire after an hour (`otp_expiry`). Inviting the same address again returns the existing auth user, which already has a profile, so `/admin/users` refuses it. Until there is a re-send action and a forgot-password flow, the fix is to delete the auth user in Studio and invite again.
 - **Public visibility of released rows is verified only by database tests.** A published row stays hidden from signed-out visitors until its release date, which must be at least three days after submission. End to end, that could only be checked by waiting or by backdating timestamps, and neither was done. The pgTAP tests in `supabase/tests/rls.test.sql` cover signed-out access to released and unreleased rows and files.
 
+## 2026-11-17 — Decided for the bid-submission slice
+
+- **Self-signup is allowed.** Users can create their own accounts. The design said staff don't self-sign up, so a self-signed-up account belongs to a bidder. It gets no agency or office role, and only an admin can grant one. Self-signup is still off in `supabase/config.toml` for now, because the app has no bidder role yet. The bid-submission slice turns it on together with bidder registration.
+- **Addenda are in scope.** Changes to a published solicitation go through addenda. Each addendum increases the solicitation's version, as the setup design already anticipated. Bidders acknowledge every addendum on the bid form, and a missing acknowledgment means the bid is accepted but flagged for the agency, as the procurement office confirmed. Published versions themselves are never edited.
+
 ## Open questions
 
 See `docs/discovery.md` §3.
