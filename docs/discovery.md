@@ -141,6 +141,8 @@ The tracker records outcomes besides "awarded": not awarded because the bids wer
 - **Ties** have probably never happened; it would be up to the agency.
 - **The posted recap is the only public disclosure.** There's no public opening or reading.
 - **Solicitation authoring.** The procurement office maintains the templates, the agency fills them in, and the office reviews the result before posting.
+- **The office checks the entire solicitation before posting.** Agency submissions are very error-prone, especially from certain agencies.
+- **The second reviewer isn't always available.** The office wants one every time, but sometimes only one person reviews.
 
 ---
 
@@ -175,6 +177,6 @@ Ranked by evidence and fit, not by how big the pain is.
 2. ~~Bidder access before close~~ Resolved: a replacement upload is allowed before close (1.7). Assumed: the latest version counts.
 3. ~~Fixable vs. disqualifying~~ Resolved (1.7).
 4. **How is "responsible" determined** by the requesting agency? Are qualifications, references and current work scored or just read?
-5. ~~Who drafts and approves solicitations~~ Resolved (1.7). Still unknown: what the office checks when it reviews a solicitation before posting.
+5. ~~Who drafts and approves solicitations~~ Resolved (1.7): the office checks the whole document. A field-level checklist would help design the setup validation, but it isn't blocking.
 6. **Is the shared drive the official record**, or only a working copy? What are the retention requirements?
-7. **Who checks the checker's work on the recap** when only one person is available? ("If possible" suggests the second check is sometimes skipped.)
+7. ~~Is the second check always done~~ Resolved (1.7): no. Open product decision: should the system require two people, or allow one reviewer with the gap recorded?
