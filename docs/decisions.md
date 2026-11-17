@@ -68,9 +68,23 @@ Real reference documents are kept locally in `source-docs/`, which is git-ignore
   - A bid tabulation published after opening.
 - **v1 targets construction RFBs**, the domain of the reference documents.
 
-## Open questions (pending input from agency contact)
+## 2026-11-16 — Revisions after auditing a full real procurement package
 
-- The agency's definition of a waivable irregularity versus grounds for rejection
-- Actual RFB workflow steps and who performs each
-- Whether insurance documents are due with the performance bond after award
-- Real bid fields and what makes each fail
+Details and evidence: `docs/discovery.md`.
+
+- **Roles and review flow are under review.** The real process involves two organizations. A central procurement office decides whether each bid is accepted (responsive), and the requesting agency picks the award from the accepted bids. The single-agency Creator/Reviewer/Approver model above is on hold until the real steps are mapped.
+- **No deadline override, for anyone.** In the real example, a project manager was willing to accept a late bid and procurement refused. The system offers no override path.
+- **Sealed bids include the bidder.** After submitting, a bidder can't view their submission until close.
+- **Bond threshold is under review.** The real intake form ties the statutory bond requirement to a *bid* over $150,000, with agency discretion from $50,000 to $149,999. That conflicts with the "project estimate, $150,000 or more" entry above, which stays in place until it's resolved.
+- **Document checks must work on scanned images.** Most real bids are scans with handwriting and no text layer.
+- **Post-award bond package.** The package is:
+  - the original performance and payment bond, notarized for both principal and surety, left undated so the agency can date it after the contract is signed;
+  - the surety's power of attorney;
+  - a notarized certification letter authorizing the person who signed.
+
+  The bidder's name must exactly match the business registration record. A mismatch sends the bond back for correction, not disqualification.
+- **The recap lists only accepted bids.** Accepted is a separate state from awarded.
+
+## Open questions
+
+See `docs/discovery.md` §3.
