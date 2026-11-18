@@ -5,7 +5,7 @@ import { todayIn } from "@/domain/time";
 import { createServerClient } from "@/lib/supabase/server";
 import { formatInstant, onlyPublic } from "@/app/solicitations/status";
 import { requireBidderPage } from "../../guard";
-import { BidDraftForm, StartBidButton } from "./BidDraftForm";
+import { BidDraftForm, PrintBlankFormButton, StartBidButton } from "./BidDraftForm";
 import { ReceiptPanel } from "./ReceiptPanel";
 import { describeReceipt, isUuid, parseBiddingState, toBidDraft, toReceipts } from "./logic";
 
@@ -56,6 +56,7 @@ export default async function BidderSolicitationPage({ params }: { params: Promi
     <>
       <p style={{ margin: "0 0 8px" }}><Link href="/bidder">Open solicitations</Link></p>
       <h1>{sol.data.number}: {data.longTitle || data.shortTitle || "Solicitation"}</h1>
+      {open && <PrintBlankFormButton solicitationId={id} />}
     </>
   );
 

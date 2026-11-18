@@ -75,3 +75,17 @@ button {
 .status-pill { display: inline-block; padding: 0 8px; border: 1px solid #999; border-radius: 10px; font-size: 12px; }
 table.list { border-collapse: collapse; width: 100%; }
 table.list th, table.list td { text-align: left; padding: 4px 8px; border-bottom: 1px solid #ddd; }
+
+/* Bidder bid page */
+.tight { margin: 0 0 6px; }
+.radio-line { display: flex; gap: 6px; align-items: center; margin: 2px 0; }
+.radio-line input { margin: 0; }
+.upload-list { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; column-gap: 16px; align-items: center; margin: 6px 0 12px; }
+.upload-row { display: contents; }
+.upload-row > * { padding: 4px 0; border-bottom: 1px solid #ddd; }
+.upload-actions { display: flex; gap: 12px; align-items: center; }
+.upload-error { grid-column: 1 / -1; margin: 0; }
+.muted { color: #666; }
+.link-button { background: none; border: none; padding: 0; color: #0645ad; text-decoration: underline; cursor: pointer; font: inherit; }
+.link-button:disabled { color: #888; cursor: default; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

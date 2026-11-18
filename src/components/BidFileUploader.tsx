@@ -60,22 +60,29 @@ export function BidFileUploader({
   }
 
   return (
-    <div className="attachment-slot" data-slot={slot}>
-      <strong>{title}</strong>
-      {current && (
-        <div className="row">
-          <span data-testid={`file-${slot}`}>{current.fileName}</span>
-          {!disabled && <button type="button" disabled={busy} onClick={() => void remove()}>Remove</button>}
-        </div>
-      )}
-      {!disabled && (
-        <input
-          ref={input} type="file" aria-label={`Upload ${title}`} disabled={busy}
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) void pick(f); }}
-        />
-      )}
-      {busy && <span> Working...</span>}
-      {error && <p role="alert" className="error">{error}</p>}
+    <div className="upload-row" data-slot={slot}>
+      <strong className="upload-title">{title}</strong>
+      <span className="upload-file">
+        {current ? <span data-testid={`file-${slot}`}>{current.fileName}</span> : <span className="muted">No file yet</span>}
+        {busy && <span> Working...</span>}
+      </span>
+      <span className="upload-actions">
+        {!disabled && (
+          <>
+            <input
+              ref={input} type="file" className="visually-hidden" tabIndex={-1} aria-label={`Upload ${title}`} disabled={busy}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) void pick(f); }}
+            />
+            <button type="button" disabled={busy} onClick={() => input.current?.click()}>
+              {current ? "Replace file" : "Upload file"}
+            </button>
+            {current && (
+              <button type="button" className="link-button" disabled={busy} onClick={() => void remove()}>Remove</button>
+            )}
+          </>
+        )}
+      </span>
+      {error && <p role="alert" className="error upload-error">{error}</p>}
     </div>
   );
 }

@@ -295,3 +295,26 @@ export const replaceConfirmationFor = (receipts: { version: number; isCurrent: b
   replaceConfirmation(receipts.find((r) => r.isCurrent)?.version ?? null);
 export const withdrawConfirmation = (version: number, due: string) =>
   `Withdraw version ${version}? It will not be opened. You can still submit a new version before ${due}.`;
+
+/**
+ * Which bid-page buttons are enabled. Presentation only: the server actions and the form route still validate.
+ * The filled form prints the SAVED draft, so it needs every amount (items and alternates) entered and saved;
+ * Submit also needs a draft with no validation issues. Unsaved amounts disable both.
+ */
+export function bidButtonState(s: {
+  readOnly: boolean;
+  /** The amount inputs differ from what was last saved. */
+  dirty: boolean;
+  saving: boolean;
+  /** Every item and alternate amount is filled in and a valid amount. */
+  allAmountsEntered: boolean;
+  /** At least one item exists on the schedule. */
+  hasItems: boolean;
+  issueCount: number;
+}): { canPrintForSignature: boolean; canSubmit: boolean } {
+  const saved = !s.dirty && !s.saving;
+  return {
+    canPrintForSignature: saved && s.hasItems && s.allAmountsEntered,
+    canSubmit: !s.readOnly && saved && s.issueCount === 0,
+  };
+}

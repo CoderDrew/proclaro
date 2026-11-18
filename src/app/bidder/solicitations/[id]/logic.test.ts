@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  assertOwnBidPath, bidMessageFor, bidUploadPath, parsePriceInputs, runAttachFile, runRemoveFile, runSavePrices,
+  assertOwnBidPath, bidButtonState, bidMessageFor, bidUploadPath, parsePriceInputs, runAttachFile, runRemoveFile, runSavePrices,
   runSetBondChoice, toBidDraft, toReceipts, type FileDeps,
   afterSubmitNotice, denialFrom, describeReceipt, parseBiddingState, replaceConfirmation, replaceConfirmationFor, runSubmitBid, withdrawConfirmation,
   type SubmitBidDeps,
@@ -342,5 +342,28 @@ describe("receipt wording", () => {
       .toMatch(/^Replacing starts a new, empty draft\. Version 2 still counts/);
     expect(withdrawConfirmation(2, "Nov 30, 2026, 1:00 PM MST"))
       .toBe("Withdraw version 2? It will not be opened. You can still submit a new version before Nov 30, 2026, 1:00 PM MST.");
+  });
+});
+
+describe("bidButtonState", () => {
+  const base = { readOnly: false, dirty: false, saving: false, allAmountsEntered: true, hasItems: true, issueCount: 0 };
+  it("enables both when everything is entered and saved", () => {
+    expect(bidButtonState(base)).toEqual({ canPrintForSignature: true, canSubmit: true });
+  });
+  it("disables both while amounts are unsaved or saving", () => {
+    expect(bidButtonState({ ...base, dirty: true })).toEqual({ canPrintForSignature: false, canSubmit: false });
+    expect(bidButtonState({ ...base, saving: true })).toEqual({ canPrintForSignature: false, canSubmit: false });
+  });
+  it("disables both when an amount is missing", () => {
+    expect(bidButtonState({ ...base, allAmountsEntered: false, issueCount: 1 })).toEqual({ canPrintForSignature: false, canSubmit: false });
+  });
+  it("lets a complete saved draft print while other issues (uploads) block submit", () => {
+    expect(bidButtonState({ ...base, issueCount: 2 })).toEqual({ canPrintForSignature: true, canSubmit: false });
+  });
+  it("after close, a saved complete draft can still be printed but not submitted", () => {
+    expect(bidButtonState({ ...base, readOnly: true })).toEqual({ canPrintForSignature: true, canSubmit: false });
+  });
+  it("needs at least one item", () => {
+    expect(bidButtonState({ ...base, hasItems: false }).canPrintForSignature).toBe(false);
   });
 });

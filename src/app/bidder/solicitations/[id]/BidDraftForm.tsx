@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BidFileUploader, type UploadedBidFile } from "@/components/BidFileUploader";
 import { formatMoney, parseMoney, type Cents } from "@/domain/money";
@@ -10,6 +10,7 @@ import { deriveRequirements } from "@/domain/solicitation/valueBands";
 import {
   attachBidFile, createBidUploadUrl, removeBidFile, saveBidPrices, setBidBondChoice, startBid, submitBid,
 } from "./actions";
+import { bidButtonState } from "./logic";
 
 const toInput = (c: Cents | null) => (c === null ? "" : formatMoney(c).slice(1));
 
@@ -31,6 +32,18 @@ export function StartBidButton({ solicitationId }: { solicitationId: string }) {
       <button type="button" disabled={busy} onClick={() => void start()}>Start a bid</button>
       {error && <p role="alert" className="error">{error}</p>}
     </div>
+  );
+}
+
+/** Opens the solicitation's unfilled bid form (for filling in by hand) in a new tab. */
+export function PrintBlankFormButton({ solicitationId }: { solicitationId: string }) {
+  return (
+    <p>
+      <button type="button" data-testid="print-blank-form"
+        onClick={() => window.open(`/api/solicitations/${solicitationId}/blank-form`, "_blank", "noopener")}>
+        Print Blank Bid Form
+      </button>
+    </p>
   );
 }
 
@@ -72,6 +85,20 @@ export function BidDraftForm({
   const allItemsEntered = draft.itemCents.every((c) => c !== null);
   const dirty = items.join("|") !== saved.items || alts.join("|") !== saved.alts;
   const slots = requiredUploadSlots(rules, choice);
+  const { canPrintForSignature, canSubmit } = bidButtonState({
+    readOnly, dirty, saving,
+    allAmountsEntered: draft.itemCents.every((c) => c !== null) && draft.alternateCents.every((c) => c !== null),
+    hasItems: nItems > 0,
+    issueCount: issues.length,
+  });
+
+  // The browser warns before the bidder leaves the page (close, reload, typed URL) with unsaved amounts.
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
 
   async function savePrices() {
     setSaving(true);
@@ -80,7 +107,7 @@ export function BidDraftForm({
     setSaving(false);
     if (!r.ok) { setMessage({ kind: "error", text: r.message }); return; }
     setSaved({ items: items.join("|"), alts: alts.join("|") });
-    setMessage({ kind: "ok", text: "Prices saved." });
+    setMessage({ kind: "ok", text: "Amounts saved." });
     router.refresh();
   }
 
@@ -133,18 +160,9 @@ export function BidDraftForm({
         Bid reference: <strong data-testid="bid-reference">{reference}</strong>
       </p>
       <p data-testid="draft-version">This draft will be submitted as version {version}.</p>
-      <p>
-        {dirty ? (
-          // The form prints the saved draft, so unsaved prices would not appear on it.
-          <><span aria-disabled="true" data-testid="print-form-disabled">Print bid form (version {version})</span>
-            {" "}Save your prices first: the printed form shows saved prices only.</>
-        ) : (
-          <a href={`/api/bids/${bidId}/form`} target="_blank" rel="noreferrer" data-testid="print-form">Print bid form (version {version})</a>
-        )}
-      </p>
       <p>Bids are due {due}.{readOnly && " Bidding has closed, so this draft can no longer be changed."}</p>
 
-      <h2>Prices</h2>
+      <h2>Amounts</h2>
       <table className="list">
         <thead><tr><th>Line</th><th>Description</th><th>Amount</th></tr></thead>
         <tbody>
@@ -186,29 +204,31 @@ export function BidDraftForm({
       </table>
       {!readOnly && (
         <p>
-          <button type="button" disabled={saving || !dirty} onClick={() => void savePrices()}>Save prices</button>
-          {dirty && <span> You have unsaved prices.</span>}
+          <button type="button" disabled={saving || !dirty} onClick={() => void savePrices()}>Save Amounts</button>
+          {dirty && <span data-testid="unsaved-notice" role="status"> Unsaved changes</span>}
         </p>
       )}
 
       {bonds && (
         <fieldset>
           <legend>Bid bond</legend>
-          <p>This solicitation requires a bid bond.</p>
-          <label className="inline">
+          <p className="tight">This solicitation requires a bid bond.</p>
+          <label className="radio-line">
             <input type="radio" name="bond" checked={choice === "electronic"} disabled={readOnly}
               onChange={() => void chooseBond("electronic")} />
-            {" "}Electronic surety bond (upload it below)
+            <span>Electronic surety bond (upload it below)</span>
           </label>
-          <label className="inline">
+          <label className="radio-line">
             <input type="radio" name="bond" checked={choice === "paper"} disabled={readOnly}
               onChange={() => void chooseBond("paper")} />
-            {" "}Paper original mailed
+            <span>Paper original mailed</span>
           </label>
         </fieldset>
       )}
 
       <h2>Required uploads</h2>
+      <p className="tight">One file per item. Uploading again replaces the current file.</p>
+      <div className="upload-list">
       {slots.map((slot) => (
         <BidFileUploader
           key={slot}
@@ -221,14 +241,25 @@ export function BidDraftForm({
           onRemove={() => removed(slot)}
         />
       ))}
+      </div>
 
       {message && <p role={message.kind === "error" ? "alert" : "status"} className={message.kind === "error" ? "error" : undefined}>{message.text}</p>}
+
+      <h2>Print for signature</h2>
+      <p>
+        <button type="button" data-testid="print-form" disabled={!canPrintForSignature}
+          onClick={() => window.open(`/api/bids/${bidId}/form`, "_blank", "noopener")}>
+          Print Bid Form for Signature
+        </button>
+        {dirty && <span> Unsaved changes: save your amounts first.</span>}
+        {!dirty && !canPrintForSignature && !readOnly && <span> Enter and save every amount to print the form.</span>}
+      </p>
 
       {!readOnly && (
         <>
         <h2>Before you can submit</h2>
         {issues.length === 0 ? (
-          <p data-testid="bid-ready">Nothing is missing from this draft.{dirty && " Save your prices first."}</p>
+          <p data-testid="bid-ready">Nothing is missing from this draft.{dirty && " Save your amounts first."}</p>
         ) : (
           <ul data-testid="bid-issues">
             {issues.map((i) => <li key={`${i.code}:${i.field}`} data-code={i.code}>{i.message}</li>)}
@@ -236,9 +267,10 @@ export function BidDraftForm({
         )}
         {!confirming ? (
           <p>
-            <button type="button" data-testid="submit-bid" disabled={issues.length > 0 || dirty || saving}
+            <button type="button" data-testid="submit-bid" disabled={!canSubmit}
               onClick={() => setConfirming(true)}>Submit bid (version {version})</button>
           </p>
+
         ) : (
           <div role="alertdialog" aria-label="Confirm submit" data-testid="submit-confirm">
             <p><strong>Submit version {version}?</strong></p>
