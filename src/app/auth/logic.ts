@@ -39,9 +39,18 @@ export function parseConfirmParams(params: URLSearchParams): { tokenHash: string
  * session itself came from an emailed one-time token. The access token's `amr` claim records
  * how the session was authenticated. Verifying an invite token hash records "otp"; a password
  * sign-in records "password". Login offers no magic link, so an "otp" session can only come
- * from the invite link.
+ * from the invite link. The development-only email sign-in (src/app/login/devLogin.ts) also yields an "otp"
+ * session, and invited_at survives acceptance of the invite, so the guard passes devEmailLogin and
+ * set-password is closed to every session while that feature is enabled.
  */
-export function canSetInitialPassword(amr: unknown, invitedAt: string | null | undefined): boolean {
+export function canSetInitialPassword(
+  amr: unknown,
+  invitedAt: string | null | undefined,
+  devEmailLogin = false,
+): boolean {
+  // Dev email sign-in also yields an "otp" session, and GoTrue keeps invited_at after an invite is accepted,
+  // so while it is enabled no session may set a password this way.
+  if (devEmailLogin) return false;
   if (!invitedAt || !Array.isArray(amr)) return false;
   // The claim is either detailed entries ({ method, timestamp }) or RFC 8176 plain strings.
   return amr.some(

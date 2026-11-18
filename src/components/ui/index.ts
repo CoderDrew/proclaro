@@ -1,4 +1,4 @@
-export { Button, type ButtonVariant, type ButtonProps } from "./Button";
+export { Button, ButtonLink, type ButtonLinkProps, type ButtonVariant, type ButtonProps } from "./Button";
 export { Card } from "./Card";
 export { Field, FieldGrid, Choice, MoneyInput } from "./Field";
 export { Notice, type NoticeTone } from "./Notice";

@@ -224,5 +224,39 @@ summary:focus-visible,
 }
 .attachment-slot {
   margin: 6px 0 10px;
+  display: grid;
+  grid-template-columns: minmax(8rem, 14rem) minmax(0, 1fr);
+  column-gap: var(--space-3);
+  align-items: start;
+}
+.attachment-slot > strong {
+  grid-column: 1;
+  grid-row: 1;
+  margin-right: 0;
+  padding-top: var(--space-1);
+}
+.attachment-slot > :not(strong) {
+  grid-column: 2;
+}
+@media (max-width: 767px) {
+  .attachment-slot {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .attachment-slot > strong,
+  .attachment-slot > :not(strong) {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+/* Bid content: the section choice and its page limit sit in two aligned columns. */
+.sol-form .row.sol-row-aligned {
+  display: grid;
+  grid-template-columns: minmax(12rem, 22rem) max-content;
+  column-gap: var(--space-4);
+}
+@media (max-width: 767px) {
+  .sol-form .row.sol-row-aligned {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 

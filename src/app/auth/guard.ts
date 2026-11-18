@@ -1,5 +1,6 @@
 import "server-only";
 import { createServerClient } from "@/lib/supabase/server";
+import { devEmailLoginEnabled } from "@/lib/devEmailLogin";
 import { canSetInitialPassword } from "./logic";
 
 /**
@@ -13,5 +14,5 @@ export async function hasInviteSession(): Promise<boolean> {
   if (error || !data?.claims?.sub) return false;
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user || userData.user.id !== data.claims.sub) return false;
-  return canSetInitialPassword(data.claims.amr, userData.user.invited_at);
+  return canSetInitialPassword(data.claims.amr, userData.user.invited_at, devEmailLoginEnabled(process.env));
 }

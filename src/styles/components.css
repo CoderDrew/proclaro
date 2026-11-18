@@ -15,6 +15,17 @@
   color: var(--color-text);
   cursor: pointer;
 }
+a.ui-button,
+a.ui-button:hover {
+  text-decoration: none;
+  color: var(--color-text);
+}
+a.ui-button--primary,
+a.ui-button--primary:hover,
+a.ui-button--danger,
+a.ui-button--danger:hover {
+  color: var(--color-on-accent);
+}
 .ui-button--secondary:hover:not(:disabled) {
   background: var(--color-page);
 }
@@ -105,6 +116,17 @@
 }
 .ui-field-grid--auto {
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.ui-field-grid > .ui-field {
+  min-width: 0;
+}
+.ui-field-grid > .ui-field :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+/* A lone checkbox or radio choice in a field grid takes its own row instead of squeezing into a column. */
+.ui-field-grid > .ui-choice {
+  grid-column: 1 / -1;
 }
 .ui-choice {
   display: flex;
@@ -461,10 +483,10 @@
   align-items: center;
 }
 .ui-preview-grid {
-  grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 .ui-card + .ui-stack,
 .ui-notice + .ui-stack,
@@ -477,11 +499,6 @@
 .ui-void-confirm {
   display: grid;
   gap: var(--space-2);
-}
-@media (max-width: 899px) {
-  .ui-preview-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 .ui-comment-row {
   display: grid;

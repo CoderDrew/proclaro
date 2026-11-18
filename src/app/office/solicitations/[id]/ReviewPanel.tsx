@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SolicitationData } from "@/domain/solicitation/types";
 import { validate, type Issue } from "@/domain/solicitation/validate";
@@ -14,7 +14,7 @@ import {
   returnToAgency, sendToCheck, startReview,
 } from "./actions";
 import type { ActionResult } from "./logic";
-import { Button, Card, EmptyState, Field, Notice, StatusBadge } from "@/components/ui";
+import { Button, ButtonLink, Card, EmptyState, Field, Notice, StatusBadge } from "@/components/ui";
 
 export interface AuditRow { id: number; actor: string; action: string; when: string; reason: string | null; changes: string[] }
 export interface StaffMember { userId: string; name: string }
@@ -102,6 +102,10 @@ export function ReviewPanel(props: {
   const [checkComment, setCheckComment] = useState("");
   const [assignee, setAssignee] = useState("");
   const [showPreviews, setShowPreviews] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (showPreviews) previewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [showPreviews]);
   const [reopenReason, setReopenReason] = useState("");
 
   const { errors, warnings } = useMemo(
@@ -192,6 +196,12 @@ export function ReviewPanel(props: {
               <Button type="button" variant="secondary" onClick={cancelEdit} disabled={busy}>Cancel</Button>
             </p>
           </Card>
+        )}
+        {showPreviews && (
+          <div className="ui-preview-grid" ref={previewRef}>
+            <iframe title="RFB preview" src={`/api/solicitations/${id}/preview?doc=rfb`} style={{ width: "100%", height: 700 }} />
+            <iframe title="Bid form preview" src={`/api/solicitations/${id}/preview?doc=bid-form`} style={{ width: "100%", height: 700 }} />
+          </div>
         )}
         <SolicitationFields
           data={data} getLatest={() => latest.current} onChange={change} editable={editing}
@@ -389,9 +399,10 @@ export function ReviewPanel(props: {
         )}
 
         <Card as="section" title="Preview">
-          <a href={`/api/solicitations/${id}/preview?doc=rfb`} target="_blank" rel="noreferrer">Open RFB</a>
-          {" · "}
-          <a href={`/api/solicitations/${id}/preview?doc=bid-form`} target="_blank" rel="noreferrer">Open bid form</a>
+          <div className="ui-inline-actions">
+            <ButtonLink href={`/api/solicitations/${id}/preview?doc=rfb`} target="_blank" rel="noreferrer">Open RFB</ButtonLink>
+            <ButtonLink href={`/api/solicitations/${id}/preview?doc=bid-form`} target="_blank" rel="noreferrer">Open bid form</ButtonLink>
+          </div>
           <p className="ui-office-note">
             <Button type="button" variant="secondary" onClick={() => setShowPreviews((v) => !v)}>
               {showPreviews ? "Hide embedded previews" : "Show embedded previews"}
@@ -419,12 +430,6 @@ export function ReviewPanel(props: {
         </Card>
       </aside>
 
-      {showPreviews && (
-        <div className="ui-preview-grid">
-          <iframe title="RFB preview" src={`/api/solicitations/${id}/preview?doc=rfb`} style={{ width: "100%", height: 700 }} />
-          <iframe title="Bid form preview" src={`/api/solicitations/${id}/preview?doc=bid-form`} style={{ width: "100%", height: 700 }} />
-        </div>
-      )}
     </div>
   );
 }

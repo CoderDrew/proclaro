@@ -6,7 +6,7 @@ import { todayIn } from "@/domain/time";
 import type { SolicitationData } from "@/domain/solicitation/types";
 import { validate, type Issue } from "@/domain/solicitation/validate";
 import { deriveRequirements } from "@/domain/solicitation/valueBands";
-import { Button, Card, Notice, StatusBadge } from "@/components/ui";
+import { Button, ButtonLink, Card, Notice, StatusBadge } from "@/components/ui";
 import { IssueList, ackKey } from "@/components/IssueList";
 import { sidebarComments } from "@/components/fieldComments";
 import { RequirementsList } from "@/components/RequirementsList";
@@ -160,9 +160,10 @@ export function SolicitationForm(props: {
         )}
 
         <Card as="section" title="Preview">
-          <a href={`/api/solicitations/${id}/preview?doc=rfb`} target="_blank" rel="noreferrer">Preview RFB</a>
-          {" · "}
-          <a href={`/api/solicitations/${id}/preview?doc=bid-form`} target="_blank" rel="noreferrer">Preview bid form</a>
+          <div className="ui-inline-actions">
+            <ButtonLink href={`/api/solicitations/${id}/preview?doc=rfb`} target="_blank" rel="noreferrer">Preview RFB</ButtonLink>
+            <ButtonLink href={`/api/solicitations/${id}/preview?doc=bid-form`} target="_blank" rel="noreferrer">Preview bid form</ButtonLink>
+          </div>
           <p className="sol-note">Previews show the last saved draft.</p>
         </Card>
 

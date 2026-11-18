@@ -343,7 +343,7 @@ export function SolicitationFields({
               {requiredSections.map((s) => {
                 const optional = (OPTIONAL_SECTIONS as readonly string[]).includes(s);
                 return (
-                  <div key={s} className="row">
+                  <div key={s} className="row sol-row-aligned">
                     <Choice label={`${SECTION_LABELS[s]}${optional ? "" : " (required)"}`}>
                       <input
                         type="checkbox" checked disabled={!optional}

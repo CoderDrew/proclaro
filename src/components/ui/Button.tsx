@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "danger" | "link";
 
@@ -17,4 +17,12 @@ export function Button({ variant = "secondary", loading, className, disabled, ch
       {children}
     </button>
   );
+}
+
+export type ButtonLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & { variant?: ButtonVariant };
+
+/** An <a> with the Button look, for navigation (a real link, same href and target) that should read as a button. */
+export function ButtonLink({ variant = "secondary", className, children, ...rest }: ButtonLinkProps) {
+  const cls = ["ui-button", `ui-button--${variant}`, className].filter(Boolean).join(" ");
+  return <a {...rest} className={cls}>{children}</a>;
 }

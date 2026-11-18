@@ -55,6 +55,10 @@ describe("canSetInitialPassword", () => {
     expect(canSetInitialPassword([{ method: "otp", timestamp: 1 }], null)).toBe(false);
     expect(canSetInitialPassword([{ method: "otp", timestamp: 1 }], undefined)).toBe(false);
   });
+  it("is closed to every session while dev email sign-in is enabled, even an invited otp one", () => {
+    expect(canSetInitialPassword([{ method: "otp", timestamp: 1 }], invitedAt, true)).toBe(false);
+    expect(canSetInitialPassword([{ method: "otp", timestamp: 1 }], invitedAt, false)).toBe(true);
+  });
   it("refuses missing or malformed claims", () => {
     expect(canSetInitialPassword(undefined, invitedAt)).toBe(false);
     expect(canSetInitialPassword("otp", invitedAt)).toBe(false);

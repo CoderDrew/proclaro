@@ -15,6 +15,8 @@ npm run test:slow                 # Chromium PDF tests only; fails if Chromium i
 npm run dev
 ```
 
+**Development-only email sign-in.** Set `DEV_EMAIL_LOGIN=1` in `.env.local` and restart `npm run dev` to sign in at `/login` with just an email address (no password) for any existing user that has a profile; unknown emails get the normal sign-in error and no user is ever created. It works only when `NODE_ENV` is not `production` and `NEXT_PUBLIC_SUPABASE_URL` points at `127.0.0.1` or `localhost`, and the server re-checks this on every sign-in. **Never set it in a hosted environment**: it signs in anyone who knows an email. Remove the line (and restart) to get the password field back.
+
 Other scripts: `db:reset`, `db:test`, and `db:types` (regenerates `src/lib/supabase/database.types.ts`).
 
 ## UI components
