@@ -162,6 +162,8 @@ Bidder registration, sealed bid submission and opening. Design: `docs/superpower
 - **Bidder-org guard (final review).** Only `register_bidder` can put a profile into a bidder org: a trigger on `profiles` refuses it otherwise, for `service_role` and admins too. Admins can't create or rename bidder orgs, and the invite page offers agencies and offices only.
 - **As-submitted names (final review).** Each submitted version records the bidder's legal name; the tabulation shows that, not the live organization name.
 - **Originals log clock (final review).** Logging an original locks the bid row (conflicting with opening's lock) and stamps `logged_at` with the database clock after the lock, so a log whose transaction straddles the due time doesn't count.
+- **Late submits are the bidder's risk (Drew, 2026-11-18).** An original counts only if it is logged by the bid due time, and it can only be logged once its version exists. A bidder who submits a new version just before close may leave no time to log that version's original, and the bid is then non-responsive. The office keeps all mailed originals on file regardless. There is no logging after close.
+- **Withdrawn bidders stay visible to the office after close (Drew, 2026-11-18).** The bid audit log shows who withdrew and when. Withdrawn bids are still never opened: they have no prices or files in the tabulation.
 
 ### Known gaps
 
