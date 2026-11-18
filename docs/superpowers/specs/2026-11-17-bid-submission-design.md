@@ -1,6 +1,6 @@
 # Slice 2a: bidder registration, sealed bid submission and opening
 
-Status: draft. Builder check pending. Not yet approved by Drew.
+Status: Approved by Drew, 2026-11-17 (builder check skipped at his direction).
 
 ## Intent
 
