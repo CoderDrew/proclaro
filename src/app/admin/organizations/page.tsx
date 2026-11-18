@@ -8,7 +8,8 @@ export const dynamic = "force-dynamic";
 export default async function OrganizationsPage() {
   await requireAdminPage();
   const supabase = await createServerClient();
-  const { data, error } = await supabase.from("organizations").select("id, name, kind").order("name");
+  // Bidder orgs are created by bidder registration and named by the bidder; admins cannot create or rename them.
+  const { data, error } = await supabase.from("organizations").select("id, name, kind").neq("kind", "bidder").order("name");
   if (error) throw new Error(error.message);
 
   return (

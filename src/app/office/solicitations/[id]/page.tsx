@@ -93,7 +93,10 @@ export default async function OfficeSolicitationPage({ params }: { params: Promi
     // Stored data that no longer matches the schema cannot be edited or published here; the agency must fix it.
     return (
       <main>
-        <p style={{ margin: "0 0 8px" }}><a href="/office">Office queues</a></p>
+        <p style={{ margin: "0 0 8px" }}>
+          <a href="/office">Office queues</a>
+          {row.state === "published" && <> · <a href={`/office/solicitations/${id}/bids`}>Bids</a></>}
+        </p>
         <h1>{row.number ?? "(unnumbered solicitation)"}</h1>
         <InvalidDataPanel
           id={id}
@@ -109,7 +112,10 @@ export default async function OfficeSolicitationPage({ params }: { params: Promi
 
   return (
     <main>
-      <p style={{ margin: "0 0 8px" }}><a href="/office">Office queues</a></p>
+      <p style={{ margin: "0 0 8px" }}>
+        <a href="/office">Office queues</a>
+        {row.state === "published" && <> · <a href={`/office/solicitations/${id}/bids`}>Bids</a></>}
+      </p>
       <h1>{data.shortTitle || "(untitled)"}</h1>
       <ReviewPanel
         key={`${row.state}:${row.reviewer_id}:${auditRows.length}`}

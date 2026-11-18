@@ -21,10 +21,10 @@ export async function createUser(formData: FormData): Promise<AdminResult> {
         isAdmin: formData.get("isAdmin") === "on",
       },
       {
-        async orgExists(id) {
-          const { data, error } = await supabase.from("organizations").select("id").eq("id", id).maybeSingle();
+        async orgKind(id) {
+          const { data, error } = await supabase.from("organizations").select("kind").eq("id", id).maybeSingle();
           if (error) throw new Error(error.message);
-          return !!data;
+          return data?.kind ?? null;
         },
         async invite(email, displayName) {
           const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {

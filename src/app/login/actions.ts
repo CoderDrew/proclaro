@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
-import { getSessionContext, homePathFor } from "@/lib/session";
+import { getAuthState, landingPathFor } from "@/lib/session";
 
 export type SignInState = { error?: string } | undefined;
 
@@ -23,12 +23,13 @@ export async function signIn(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: "Sign-in failed. Check your email and password." };
 
-  const ctx = await getSessionContext();
-  if (!ctx) {
+  const state = await getAuthState();
+  // An invited account with no profile is staff that was never set up: it never self-registers.
+  if (state.status === "unregistered" && state.invited) {
     await supabase.auth.signOut();
     return { error: "This account has no profile. Contact an administrator." };
   }
-  redirect(homePathFor(ctx));
+  redirect(landingPathFor(state));
 }
 
 export async function signOut() {

@@ -2,6 +2,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { ActionForm } from "../ActionForm";
 import { requireAdminPage } from "../guard";
 import { createUser } from "./actions";
+import { INVITABLE_ORG_KINDS } from "./logic";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,8 @@ export default async function UsersPage() {
   ]);
   for (const r of [orgs, profiles]) if (r.error) throw new Error(r.error.message);
   const orgName = new Map(orgs.data!.map((o) => [o.id, o.name]));
+  // Staff are invited into agencies and offices only; bidder orgs are never offered (and the action refuses them).
+  const invitable = orgs.data!.filter((o) => (INVITABLE_ORG_KINDS as readonly string[]).includes(o.kind));
 
   return (
     <main>
@@ -30,7 +33,7 @@ export default async function UsersPage() {
             Organization{" "}
             <select name="orgId" required defaultValue="">
               <option value="" disabled>Choose...</option>
-              {orgs.data!.map((o) => (
+              {invitable.map((o) => (
                 <option key={o.id} value={o.id}>{o.name} ({o.kind})</option>
               ))}
             </select>

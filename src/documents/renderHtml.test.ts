@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { SolicitationData } from "../domain/solicitation/types";
 import { renderBidFormHtml, renderRfbHtml } from "./renderHtml";
 import { ctxWith } from "./testFixtures";
+import type { BidFill } from "./bidFill";
+import { extractFooterTemplate } from "./pdf";
 
 const html = (est: number, extra: Partial<SolicitationData> = {}) =>
   renderRfbHtml(ctxWith(est, extra), { draft: false });
@@ -128,5 +130,50 @@ describe("bid form", () => {
   it("escapes item names", () => {
     expect(form({ schedule: { items: [{ name: "<b>x</b>", description: "" }], alternates: [] } }))
       .not.toContain("<b>x</b>");
+  });
+});
+
+describe("bid form fill", () => {
+  const fill: BidFill = {
+    legalName: "R&D Builders <Calder>", address: "1 Elm St, Calder City", contact: "Ana Ridge, 555-0142, ana@example.test",
+    residentClaimed: true, residentCertificate: "RC-123", reference: "K7QM-2XVD", bidVersion: 2,
+    itemCents: [12_500_000, 234_567], alternateCents: [1_500_000], bidBond: "paper",
+  };
+  const ctx = ctxWith(16_000_000, {
+    schedule: {
+      items: [{ name: "Dormitory A", description: "Roof" }, { name: "Dormitory B", description: "" }],
+      alternates: [{ kind: "additive", description: "Add gutters" }],
+    },
+  });
+  const filled = renderBidFormHtml(ctx, { draft: false, fill });
+  const cells = (attr: string) =>
+    [...(new RegExp(String.raw`<table data-${attr}[\s\S]*?</table>`).exec(filled)?.[0] ?? "").matchAll(/<td class="price">([^<]*)<\/td>/g)].map((m) => m[1]);
+
+  it("escapes and shows the legal name, address, contact and resident claim", () => {
+    expect(filled).toContain("R&amp;D Builders &lt;Calder&gt;");
+    expect(filled).not.toContain("R&D Builders <Calder>");
+    expect(filled).toContain("1 Elm St, Calder City");
+    expect(filled).toContain("Ana Ridge, 555-0142, ana@example.test");
+    expect(filled).toContain("RC-123");
+  });
+  it("prices in snapshot order, from cents, with the total", () => {
+    expect(cells("bid-schedule")).toEqual(["$125,000.00", "$2,345.67"]);
+    expect(cells("bid-alternates")).toEqual(["$15,000.00"]);
+    expect(cells("bid-total")).toEqual(["$127,345.67"]);
+  });
+  it("every page carries the bid reference and version", () => {
+    const refs = [...filled.matchAll(/<p data-bid-ref[^>]*>([^<]*)<\/p>/g)].map((m) => m[1]);
+    expect(refs).toEqual(Array(4).fill("Bid reference K7QM-2XVD · Bid version 2"));
+  });
+  it("footer is the slice 1 final footer", () => {
+    expect(extractFooterTemplate(filled)).toBe("Solicitation 27-0001 · Version 1 · Page {n} of {total}");
+  });
+  it("bond line reflects the choice", () => {
+    expect(filled).toContain("Paper original mailed");
+    expect(renderBidFormHtml(ctx, { draft: false, fill: { ...fill, bidBond: "electronic" } })).toContain("Electronic surety bond uploaded");
+  });
+  it("without a fill the output is unchanged from slice 1", () => {
+    expect(renderBidFormHtml(ctx, { draft: false })).toMatchSnapshot();
+    expect(renderBidFormHtml(ctx, { draft: true })).toMatchSnapshot();
   });
 });

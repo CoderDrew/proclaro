@@ -69,6 +69,23 @@ describe.skipIf(!hasChromium)("[slow] chromium PDF rendering", () => {
     expect(all).not.toContain("Solicitation 27-0001");
   }, 60_000);
 
+  it("pre-filled bid form PDF shows the reference, version, prices and the slice 1 footer", async () => {
+    const ctx = ctxWith(200_000_00, { schedule: { items: [{ name: "A", description: "" }, { name: "B", description: "" }], alternates: [] } });
+    const fill = {
+      legalName: "Ridge Builders", address: "1 Elm St", contact: "Ana Ridge, 555-0142, ana@example.test",
+      residentClaimed: false, residentCertificate: null, reference: "K7QM-2XVD", bidVersion: 2,
+      itemCents: [12_500_000, 234_567], alternateCents: [], bidBond: "paper" as const,
+    };
+    const pages = await pdfPages(await renderPdf(renderBidFormHtml(ctx, { draft: false, fill }), chromiumRenderer()));
+    const total = pages.length;
+    pages.forEach((text, i) => {
+      expect(text).toContain("Bid reference K7QM-2XVD · Bid version 2");
+      expect(text).toContain(`Solicitation 27-0001 · Version 1 · Page ${i + 1} of ${total}`);
+    });
+    const all = pages.join(" ");
+    for (const t of ["$125,000.00", "$2,345.67", "$127,345.67", "Ridge Builders", "Paper original mailed"]) expect(all).toContain(t);
+  }, 60_000);
+
   it("renders the RFB without a footer template", async () => {
     const bytes = await renderPdf(renderRfbHtml(ctxWith(200_000_00), { draft: true }), chromiumRenderer());
     const pages = await pdfPages(bytes);

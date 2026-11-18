@@ -28,18 +28,20 @@ Other scripts: `db:reset`, `db:test`, and `db:types` (regenerates `src/lib/supab
 | Procurement reviewer / checker | `reviewer1@example.test` | `/office` |
 | Procurement reviewer / checker | `reviewer2@example.test` | `/office` |
 | Admin (procurement office) | `admin@example.test` | `/admin` |
+| Bidder (Ridgeback Builders LLC) | `bidder.ridgeback@example.test` | `/bidder` |
+| Bidder (Granite Mesa Contractors) | `bidder.granite@example.test` | `/bidder` |
 
 The two procurement users can each act as reviewer or checker, but never both on the same solicitation.
 
 ## Invited users
 
-Self-signup is off (`enable_signup = false`). An admin invites staff from `/admin/users`, and each invited user signs in for the first time like this:
+Staff are invite-only (bidders sign themselves up; see the bid-submission tour below). An admin invites staff from `/admin/users`, and each invited user signs in for the first time like this:
 
 1. The invite email (template `supabase/templates/invite.html`) links to `/auth/confirm?token_hash=...&type=invite`.
 2. `/auth/confirm` verifies the one-time token on the server with `@supabase/ssr` (`verifyOtp`). That sets the session cookies and sends the user to `/auth/set-password`.
 3. `/auth/set-password` is open only to an invited user whose current session came from that link. After they choose a password (at least 8 characters), they land on their home page. From then on they sign in at `/login`.
 
-Locally, the invite email lands in Mailpit at http://127.0.0.1:54324. The invite link points at `SITE_URL` (`.env.local`, default `http://127.0.0.1:3000`), so set `SITE_URL` when the dev server runs on another port. `additional_redirect_urls` in `supabase/config.toml` allows `/auth/confirm` on any local port. After changing `config.toml` or the template, restart the stack (`npx supabase stop`, then `npm run db:start`).
+Locally, the invite email lands in Mailpit at http://127.0.0.1:54324. The invite link points at `SITE_URL` (`.env.local`, default `http://127.0.0.1:3000`), so set `SITE_URL` when the dev server runs on another port. `additional_redirect_urls` in `supabase/config.toml` allows `/auth/confirm` on any local port. After changing `config.toml` or the template, restart the stack (`npx supabase stop`, then `npm run db:start`). `npm run db:reset` does not reload auth settings, so this applies to `enable_signup` too.
 
 ## Tour of the solicitation-setup slice
 
@@ -49,3 +51,14 @@ Locally, the invite email lands in Mailpit at http://127.0.0.1:54324. The invite
 4. **`/solicitations`**: the public listing. A published solicitation appears here, and at `/solicitations/<number>` with its PDFs and attachments, from its release date. Before then only office staff can see it.
 5. **`/admin`**: admins manage users, organizations, standard clauses, holidays, and settings (state and office names, time zone, fiscal-year start).
 
+## Tour of the bid-submission slice
+
+Self-signup is on (`enable_signup = true`). Changing it needs `npx supabase stop` and then `npm run db:start`, because `db:reset` doesn't reload auth. Email confirmation is off locally.
+
+1. **`/signup`**: a bidder creates an account (email and password). It gets no agency or office role.
+2. **`/register`**: the new account registers its company (legal name, address, contact, optional resident claim). This creates a bidder organization and sends the user to `/bidder`. The seeded bidders are already registered.
+3. **`/bidder`**: open solicitations and "My bids".
+4. **`/bidder/solicitations/{id}`**: start a bid, enter prices, upload the required files, choose the bid bond option when one is required, print the pre-filled bid form, and submit. Afterwards the page shows receipts (time, reference, version, no prices) and lets the bidder replace or withdraw until close.
+5. **`/office`**: the "Published" table links each published solicitation to **`/office/solicitations/{id}/bids`**. Before the bid due time the office sees only references, versions and statuses, and can log mailed originals (and void a mistaken entry). After it, the same page shows the internal tabulation, each bid's prices and files, tamper flags and any non-responsive reason.
+
+The seed inserts two published, released solicitations directly: `27-0001` (due in 14 days, bid bond required) and `27-0002`, which closes about 20 minutes after `db:reset` so the opening can be tried locally. They have no RFB or bid-form PDFs in the `published` bucket, so their public download links are absent.

@@ -1,5 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { todayIn } from "@/domain/time";
+import { formatInstant } from "@/app/solicitations/status";
 import { requireOfficePage } from "./guard";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export default async function OfficeHome({ searchParams }: { searchParams: Promi
   const mineOnly = review !== "all";
 
   const supabase = await createServerClient();
-  const [rows, orgs, staff, settings] = await Promise.all([
+  const [rows, orgs, staff, settings, published] = await Promise.all([
     supabase.from("solicitations")
       .select("id, number, state, data, agency_id, reviewer_id, latest_submitted_at")
       .in("state", ["submitted", "in_review", "in_check", "approved"])
@@ -23,8 +24,12 @@ export default async function OfficeHome({ searchParams }: { searchParams: Promi
     supabase.from("organizations").select("id, name"),
     supabase.from("profiles").select("user_id, display_name"),
     supabase.from("settings").select("timezone").eq("id", 1).single(),
+    supabase.from("solicitations")
+      .select("id, number, data, agency_id, bid_due_at")
+      .eq("state", "published")
+      .order("bid_due_at", { ascending: true }),
   ]);
-  for (const r of [rows, orgs, staff, settings]) if (r.error) throw new Error(r.error.message);
+  for (const r of [rows, orgs, staff, settings, published]) if (r.error) throw new Error(r.error.message);
   const agencyName = new Map(orgs.data!.map((o) => [o.id, o.name]));
   const staffName = new Map(staff.data!.map((p) => [p.user_id, p.display_name]));
   const all = rows.data as Row[];
@@ -79,6 +84,30 @@ export default async function OfficeHome({ searchParams }: { searchParams: Promi
 
       <h2>Approved</h2>
       {table(all.filter((r) => r.state === "approved"), "Nothing is approved yet.")}
+
+      <h2>Published</h2>
+      {published.data!.length === 0 ? <p>Nothing is published.</p> : (
+        <table className="list" data-testid="published">
+          <thead>
+            <tr><th>Number</th><th>Title</th><th>Agency</th><th>Bid due</th><th>Bids</th></tr>
+          </thead>
+          <tbody>
+            {published.data!.map((r) => (
+              <tr key={r.id}>
+                <td>{r.number ?? "-"}</td>
+                <td>
+                  <a href={`/office/solicitations/${r.id}`}>
+                    {(r.data as { shortTitle?: string } | null)?.shortTitle || "(untitled)"}
+                  </a>
+                </td>
+                <td>{agencyName.get(r.agency_id) ?? ""}</td>
+                <td>{r.bid_due_at ? formatInstant(r.bid_due_at, tz) : "-"}</td>
+                <td><a href={`/office/solicitations/${r.id}/bids`}>Originals log and tabulation</a></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </main>
   );
 }

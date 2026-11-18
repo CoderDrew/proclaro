@@ -4,9 +4,12 @@ import { cleanText, isAdminCtx, NOT_ADMIN, type AdminResult } from "../common";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Staff are invited into agencies and offices only. Bidder orgs are joined through bidder registration alone. */
+export const INVITABLE_ORG_KINDS = ["agency", "office"] as const;
+
 export interface UserDeps {
-  /** Through the caller's RLS client. */
-  orgExists(id: string): Promise<boolean>;
+  /** The organization's kind through the caller's RLS client, or null when the caller cannot see it. */
+  orgKind(id: string): Promise<string | null>;
   /** auth.admin.inviteUserByEmail. Returns the new auth user id, or the provider's error text. */
   invite(email: string, displayName: string): Promise<{ userId: string } | { error: string }>;
   /** Whether this auth user already has a profile (re-inviting an existing email returns the existing user). */
@@ -29,7 +32,11 @@ export async function createUser(
   if ("error" in name) return { ok: false, message: name.error };
   // Shape check only (like the other actions): zod's uuid() also demands RFC version bits, which seed ids lack.
   const orgId = typeof input.orgId === "string" && UUID.test(input.orgId) ? input.orgId : null;
-  if (!orgId || !(await d.orgExists(orgId))) return { ok: false, message: "Choose an organization." };
+  // A bidder org is refused here (and by the database's profiles_bidder_org_guard): staff never join one.
+  const kind = orgId ? await d.orgKind(orgId) : null;
+  if (!orgId || !(INVITABLE_ORG_KINDS as readonly (string | null)[]).includes(kind)) {
+    return { ok: false, message: "Choose an agency or office." };
+  }
   const isAdmin = input.isAdmin === true;
 
   const invited = await d.invite(email.data, name.value);

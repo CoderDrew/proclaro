@@ -49,6 +49,246 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"bid_audit_log": {
+                  Row: {
+                    "action": string,"actor_id": string | null,"bid_id": string | null,"created_at": string,"detail": NonNullable<Json>,"id": number,"solicitation_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"actor_id"?: string | null,"bid_id"?: string | null,"created_at"?: string,"detail"?: NonNullable<Json>,"id"?: number,"solicitation_id": string
+                  }
+                  Update: {
+                    "action"?: string,"actor_id"?: string | null,"bid_id"?: string | null,"created_at"?: string,"detail"?: NonNullable<Json>,"id"?: number,"solicitation_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bid_audit_log_actor_id_fkey"
+      columns: ["actor_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "bid_audit_log_bid_id_fkey"
+      columns: ["bid_id"]
+isOneToOne: false
+      referencedRelation: "bids"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bid_audit_log_solicitation_id_fkey"
+      columns: ["solicitation_id"]
+isOneToOne: false
+      referencedRelation: "solicitations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"bid_draft_files": {
+                  Row: {
+                    "bid_id": string,"file_name": string,"path": string,"slot": Database["public"]['Enums']["bid_upload_slot"]
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "bid_id": string,"file_name": string,"path": string,"slot": Database["public"]['Enums']["bid_upload_slot"]
+                  }
+                  Update: {
+                    "bid_id"?: string,"file_name"?: string,"path"?: string,"slot"?: Database["public"]['Enums']["bid_upload_slot"]
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bid_draft_files_bid_id_fkey"
+      columns: ["bid_id"]
+isOneToOne: false
+      referencedRelation: "bid_drafts"
+      referencedColumns: ["bid_id"]
+    }
+                  ]
+                },"bid_drafts": {
+                  Row: {
+                    "alternate_cents": (number)[],"bid_bond_choice": Database["public"]['Enums']["bid_bond_choice"] | null,"bid_id": string,"item_cents": (number)[],"updated_at": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "alternate_cents"?: (number)[],"bid_bond_choice"?: Database["public"]['Enums']["bid_bond_choice"] | null,"bid_id": string,"item_cents"?: (number)[],"updated_at"?: string,"version": number
+                  }
+                  Update: {
+                    "alternate_cents"?: (number)[],"bid_bond_choice"?: Database["public"]['Enums']["bid_bond_choice"] | null,"bid_id"?: string,"item_cents"?: (number)[],"updated_at"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bid_drafts_bid_id_fkey"
+      columns: ["bid_id"]
+isOneToOne: true
+      referencedRelation: "bids"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"bid_original_log": {
+                  Row: {
+                    "bid_id": string,"id": string,"item": Database["public"]['Enums']["original_item"],"logged_at": string,"logged_by": string,"reason": string | null,"received_at": string | null,"reference": string,"solicitation_id": string,"version": number,"voids_entry_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "bid_id": string,"id"?: string,"item": Database["public"]['Enums']["original_item"],"logged_at"?: string,"logged_by": string,"reason"?: string | null,"received_at"?: string | null,"reference": string,"solicitation_id": string,"version": number,"voids_entry_id"?: string | null
+                  }
+                  Update: {
+                    "bid_id"?: string,"id"?: string,"item"?: Database["public"]['Enums']["original_item"],"logged_at"?: string,"logged_by"?: string,"reason"?: string | null,"received_at"?: string | null,"reference"?: string,"solicitation_id"?: string,"version"?: number,"voids_entry_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bid_original_log_bid_id_fkey"
+      columns: ["bid_id"]
+isOneToOne: false
+      referencedRelation: "bids"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bid_original_log_bid_id_version_fkey"
+      columns: ["bid_id","version"]
+isOneToOne: false
+      referencedRelation: "bid_versions"
+      referencedColumns: ["bid_id","version"]
+    },{
+      foreignKeyName: "bid_original_log_logged_by_fkey"
+      columns: ["logged_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "bid_original_log_solicitation_id_fkey"
+      columns: ["solicitation_id"]
+isOneToOne: false
+      referencedRelation: "solicitations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bid_original_log_voids_entry_id_fkey"
+      columns: ["voids_entry_id"]
+isOneToOne: true
+      referencedRelation: "bid_original_log"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"bid_version_files": {
+                  Row: {
+                    "file_name": string,"object_etag": string | null,"object_id": string | null,"object_size": number | null,"path": string,"slot": Database["public"]['Enums']["bid_upload_slot"],"version_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "file_name": string,"object_etag"?: string | null,"object_id"?: string | null,"object_size"?: number | null,"path": string,"slot": Database["public"]['Enums']["bid_upload_slot"],"version_id": string
+                  }
+                  Update: {
+                    "file_name"?: string,"object_etag"?: string | null,"object_id"?: string | null,"object_size"?: number | null,"path"?: string,"slot"?: Database["public"]['Enums']["bid_upload_slot"],"version_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bid_version_files_version_id_fkey"
+      columns: ["version_id"]
+isOneToOne: false
+      referencedRelation: "bid_versions"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"bid_versions": {
+                  Row: {
+                    "alternate_cents": (number)[],"bid_bond_choice": Database["public"]['Enums']["bid_bond_choice"] | null,"bid_id": string,"bidder_legal_name": string,"id": string,"item_cents": (number)[],"submitted_at": string,"submitted_by": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "alternate_cents": (number)[],"bid_bond_choice"?: Database["public"]['Enums']["bid_bond_choice"] | null,"bid_id": string,"bidder_legal_name": string,"id"?: string,"item_cents": (number)[],"submitted_at"?: string,"submitted_by": string,"version": number
+                  }
+                  Update: {
+                    "alternate_cents"?: (number)[],"bid_bond_choice"?: Database["public"]['Enums']["bid_bond_choice"] | null,"bid_id"?: string,"bidder_legal_name"?: string,"id"?: string,"item_cents"?: (number)[],"submitted_at"?: string,"submitted_by"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bid_versions_bid_id_fkey"
+      columns: ["bid_id"]
+isOneToOne: false
+      referencedRelation: "bids"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bid_versions_submitted_by_fkey"
+      columns: ["submitted_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["user_id"]
+    }
+                  ]
+                },"bid_withdrawals": {
+                  Row: {
+                    "bid_id": string,"version": number,"withdrawn_at": string,"withdrawn_by": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "bid_id": string,"version": number,"withdrawn_at"?: string,"withdrawn_by": string
+                  }
+                  Update: {
+                    "bid_id"?: string,"version"?: number,"withdrawn_at"?: string,"withdrawn_by"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bid_withdrawals_bid_id_version_fkey"
+      columns: ["bid_id","version"]
+isOneToOne: true
+      referencedRelation: "bid_versions"
+      referencedColumns: ["bid_id","version"]
+    },{
+      foreignKeyName: "bid_withdrawals_withdrawn_by_fkey"
+      columns: ["withdrawn_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["user_id"]
+    }
+                  ]
+                },"bidder_companies": {
+                  Row: {
+                    "address": string,"contact_email": string,"contact_name": string,"contact_phone": string,"created_at": string,"org_id": string,"resident_certificate": string | null,"resident_claimed": boolean
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "address": string,"contact_email": string,"contact_name": string,"contact_phone": string,"created_at"?: string,"org_id": string,"resident_certificate"?: string | null,"resident_claimed"?: boolean
+                  }
+                  Update: {
+                    "address"?: string,"contact_email"?: string,"contact_name"?: string,"contact_phone"?: string,"created_at"?: string,"org_id"?: string,"resident_certificate"?: string | null,"resident_claimed"?: boolean
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bidder_companies_org_id_fkey"
+      columns: ["org_id"]
+isOneToOne: true
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"bids": {
+                  Row: {
+                    "bidder_org_id": string,"created_at": string,"created_by": string,"id": string,"reference": string,"solicitation_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "bidder_org_id": string,"created_at"?: string,"created_by": string,"id"?: string,"reference": string,"solicitation_id": string
+                  }
+                  Update: {
+                    "bidder_org_id"?: string,"created_at"?: string,"created_by"?: string,"id"?: string,"reference"?: string,"solicitation_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bids_bidder_org_id_fkey"
+      columns: ["bidder_org_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bids_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "bids_solicitation_id_fkey"
+      columns: ["solicitation_id"]
+isOneToOne: false
+      referencedRelation: "solicitations"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"clauses": {
                   Row: {
                     "body": string,"created_at": string,"created_by": string | null,"key": string,"version": number
@@ -276,11 +516,37 @@ isOneToOne: false
 "approve_check":
 { Args: { "p_id": string }; Returns: undefined
                            },
+"bidding_state":
+{ Args: { "p_solicitation_id": string }; Returns: string
+                           },
 "disagree":
 { Args: { "p_comment": string,"p_field": string,"p_id": string }; Returns: undefined
                            },
+"log_bid_original":
+{ Args: { "p_item": Database["public"]['Enums']["original_item"],"p_received_at"?: string,"p_reference": string,"p_solicitation_id": string,"p_version": number }; Returns: string
+                           },
+"my_bid_receipts":
+{ Args: { "p_bid_id": string }; Returns: {
+              "is_current": boolean,"reference": string,"submitted_at": string,"version": number,"withdrawn_at": string
+            }[]
+                           },
+"office_bid_index":
+{ Args: { "p_solicitation_id": string }; Returns: {
+              "reference": string,"status": string,"version": number
+            }[]
+                           },
 "office_update_data":
 { Args: { "p_data": Json,"p_id": string,"p_reason": string }; Returns: undefined
+                           },
+"opened_bid_files":
+{ Args: { "p_solicitation_id": string }; Returns: {
+              "bid_id": string,"file_name": string,"file_status": string,"path": string,"slot": Database["public"]['Enums']["bid_upload_slot"]
+            }[]
+                           },
+"opened_bids":
+{ Args: { "p_solicitation_id": string }; Returns: {
+              "alternate_cents": (number)[],"base_total_cents": number,"bid_bond_choice": Database["public"]['Enums']["bid_bond_choice"],"bid_id": string,"bidder_name": string,"bidder_org_id": string,"bond_original_received": boolean,"item_cents": (number)[],"non_responsive_reason": string,"original_received": boolean,"reference": string,"submitted_at": string,"version": number
+            }[]
                            },
 "publish_solicitation":
 { Args: { "p_bid_due_at": string,"p_bid_form_path": string,"p_id": string,"p_rfb_path": string,"p_snapshot": Json }; Returns: undefined
@@ -288,8 +554,14 @@ isOneToOne: false
 "reassign_review":
 { Args: { "p_id": string,"p_user": string }; Returns: undefined
                            },
+"register_bidder":
+{ Args: { "p_address": string,"p_contact_email": string,"p_contact_name": string,"p_contact_phone": string,"p_legal_name": string,"p_resident_certificate": string,"p_resident_claimed": boolean }; Returns: string
+                           },
 "reopen_review":
 { Args: { "p_id": string,"p_reason": string }; Returns: undefined
+                           },
+"replace_bid":
+{ Args: { "p_bid_id": string }; Returns: undefined
                            },
 "return_to_agency":
 { Args: { "p_comments": Json,"p_id": string }; Returns: undefined
@@ -297,15 +569,29 @@ isOneToOne: false
 "send_to_check":
 { Args: { "p_id": string }; Returns: undefined
                            },
+"start_bid":
+{ Args: { "p_solicitation_id": string }; Returns: string
+                           },
 "start_review":
 { Args: { "p_id": string }; Returns: undefined
                            },
+"submit_bid":
+{ Args: { "p_bid_id": string }; Returns: {
+              "reference": string,"submitted_at": string,"version": number
+            }[]
+                           },
 "submit_solicitation":
 { Args: { "p_id": string }; Returns: undefined
+                           },
+"void_bid_original":
+{ Args: { "p_entry_id": string,"p_reason": string }; Returns: string
+                           },
+"withdraw_bid":
+{ Args: { "p_bid_id": string }; Returns: undefined
                            }
           }
           Enums: {
-            "comment_kind": "return"|"disagree"|"note","org_kind": "agency"|"office","solicitation_state": "draft"|"submitted"|"in_review"|"in_check"|"approved"|"published"
+            "bid_bond_choice": "electronic"|"paper","bid_upload_slot": "insurance"|"qualifications"|"references"|"current_work"|"bid_bond","comment_kind": "return"|"disagree"|"note","org_kind": "agency"|"office"|"bidder","original_item": "signed_form"|"bid_bond","solicitation_state": "draft"|"submitted"|"in_review"|"in_check"|"approved"|"published"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -425,7 +711,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "comment_kind": ["return", "disagree", "note"],"org_kind": ["agency", "office"],"solicitation_state": ["draft", "submitted", "in_review", "in_check", "approved", "published"]
+            "bid_bond_choice": ["electronic", "paper"],"bid_upload_slot": ["insurance", "qualifications", "references", "current_work", "bid_bond"],"comment_kind": ["return", "disagree", "note"],"org_kind": ["agency", "office", "bidder"],"original_item": ["signed_form", "bid_bond"],"solicitation_state": ["draft", "submitted", "in_review", "in_check", "approved", "published"]
           }
         }
 } as const

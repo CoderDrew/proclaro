@@ -3,7 +3,7 @@ import type { SessionContext } from "@/lib/session";
 import { addHoliday, removeHoliday, type HolidayDeps } from "./holidays/logic";
 import { createOrganization, renameOrganization, type OrgDeps } from "./organizations/logic";
 import { saveSettings, type SettingsDeps } from "./settings/logic";
-import { createUser, type UserDeps } from "./users/logic";
+import { createUser, INVITABLE_ORG_KINDS, type UserDeps } from "./users/logic";
 
 const admin: SessionContext = { userId: "u-admin", orgId: "o1", orgKind: "office", isAdmin: true, displayName: "Admin" };
 const staff: SessionContext = { ...admin!, isAdmin: false };
@@ -116,7 +116,7 @@ describe("organizations", () => {
 
 describe("createUser", () => {
   const d = (over: Partial<UserDeps> = {}): UserDeps => ({
-    orgExists: vi.fn(async () => true),
+    orgKind: vi.fn(async () => "office" as string | null),
     invite: vi.fn(async () => ({ userId: "new-user" }) as { userId: string } | { error: string }),
     profileExists: vi.fn(async () => false),
     insertProfile: vi.fn(async () => true),
@@ -163,15 +163,33 @@ describe("createUser", () => {
       expect((await createUser(admin, { ...input, ...bad }, deps)).ok, JSON.stringify(bad)).toBe(false);
       expect(deps.invite).not.toHaveBeenCalled();
     }
-    const deps = d({ orgExists: async () => false });
+    const deps = d({ orgKind: async () => null });
     expect((await createUser(admin, input, deps)).ok).toBe(false);
     expect(deps.invite).not.toHaveBeenCalled();
+  });
+  it("refuses a bidder organization before inviting anyone (staff never join a bidder org)", async () => {
+    const deps = d({ orgKind: vi.fn(async () => "bidder") });
+    const r = await createUser(admin, input, deps);
+    expect(r).toEqual({ ok: false, message: "Choose an agency or office." });
+    expect(deps.orgKind).toHaveBeenCalledWith(ORG);
+    expect(deps.invite).not.toHaveBeenCalled();
+    expect(deps.insertProfile).not.toHaveBeenCalled();
+  });
+  it("invites into an agency or an office", async () => {
+    for (const kind of ["agency", "office"]) {
+      const deps = d({ orgKind: async () => kind });
+      expect((await createUser(admin, input, deps)).ok, kind).toBe(true);
+      expect(deps.insertProfile).toHaveBeenCalled();
+    }
+  });
+  it("offers agency and office organizations only", () => {
+    expect([...INVITABLE_ORG_KINDS]).toEqual(["agency", "office"]);
   });
   it("refuses non-admins before any lookup", async () => {
     const deps = d();
     expect((await createUser(staff, input, deps)).ok).toBe(false);
     expect((await createUser(null, input, deps)).ok).toBe(false);
-    expect(deps.orgExists).not.toHaveBeenCalled();
+    expect(deps.orgKind).not.toHaveBeenCalled();
     expect(deps.invite).not.toHaveBeenCalled();
   });
 });

@@ -65,11 +65,11 @@ Slice 2 is split into three parts, agreed with Drew on 2026-11-17:
 
 1. **Time-gated database access (chosen).**
    - How it works:
-     - Submitted bids and their files sit in tables and a storage bucket that no API role can read directly, including service_role.
+     - Submitted bids sit in tables that no API role can read directly, including service_role. Their files sit in a storage bucket that anon and authenticated users cannot read before close; service_role can (see the known limit below).
      - Reads go through security-definer functions that check `now() >= bid_due_at`.
      - "Closed" is derived from the clock, not stored, so no scheduled job is needed.
      - This is the same enforcement model as slice 1.
-   - Known limit: a Postgres superuser with direct database access can still read bids.
+   - Known limit: a Postgres superuser with direct database access can still read bids. The service-role key can also read, replace or delete sealed bid files in Storage, read their metadata (`storage.objects.owner` and `created_at`: who uploaded which file for which bid, and when), and update the `bid-files` bucket row (for example make it public), because Supabase's storage admin grants it access and migrations can't revoke that; bid prices in tables stay sealed from it, and app code never touches bid files with the admin client.
 2. **Encrypt bid contents until close.**
    - Stronger: even a DB admin sees only ciphertext.
    - Costs: key management, encrypted uploads, and a scheduled key release at close.
@@ -99,7 +99,7 @@ Slice 2 is split into three parts, agreed with Drew on 2026-11-17:
   3. Replace, which starts a new, empty draft. A sealed version cannot be read back, so nothing is prefilled. Submitting it creates version n+1, which supersedes n.
 - **Who can bid when:**
   - Bidding is allowed only while the solicitation is published, released and not closed.
-  - Submit and replace are refused at or after `bid_due_at`. The database decides; the client clock does not.
+  - Submit, replace, withdraw and start are refused at or after `bid_due_at`. The database decides; the client clock does not. Each writer checks the deadline twice, against the transaction start time and again, on the database's own clock, after taking the bid lock, so a call that straddles the deadline is refused.
 - **Pre-filled bid form PDF:**
   - Generated from the draft with the slice 1 templates and renderer.
   - Contains the bidder's prices, the bidder's legal name, the bid reference and the version the draft will become when submitted.
@@ -114,7 +114,7 @@ Slice 2 is split into three parts, agreed with Drew on 2026-11-17:
 ### Close and opening
 - **Closed** is computed as `now() >= bid_due_at`.
 - **What opens:** on read after close, each solicitation's latest submitted version of every bid becomes readable to office staff.
-- **Original-received check:** a bid is computed as non-responsive (reason: "signed original not received by the bid due time") when no signed-form log entry exists for its latest version with `received_at <= bid_due_at`. This check is deterministic and recorded on first read after close, or derived consistently every time.
+- **Original-received check:** a bid is computed as non-responsive (reason: "signed original not received by the bid due time") when no signed-form log entry exists for its latest version that was both received (`received_at <= bid_due_at`) and logged (`logged_at <= bid_due_at`) by the bid due time and has not been voided. A void counts whenever it is made. The result is derived on every read, and the determination is audited on the first read after close and again only when the derived result changes. Withdrawn bids are never opened. The bid bond is judged by the bidder's choice: a paper bond's receipt is shown to the office but does not make a bid non-responsive (the cure is 2b).
 - **Internal tabulation (office only):** for each bid, the bidder, the base total, each alternate, and the original-received status. Totals are computed from the stored cents, never entered.
 
 ### Access rules (enforced in Postgres)
@@ -136,11 +136,15 @@ Each of these writes an audit row:
 - void
 - close-time non-responsive determination
 
+## Added while building
+- **Bidder is an organization kind.** Solicitation writes are agency-only, and office staff profiles are hidden from bidders.
+- **Tamper evidence for the accepted Storage limit.** Each file's size, eTag and object id are recorded at submit, and opening flags a file that is missing or changed since.
+
 ## Left to the builder
 - Table and function names and shapes.
 - The bid reference format (short, unique, non-guessable, safe to print).
 - The storage path layout under a sealed bucket.
-- How the close-time non-responsive determination is recorded: stored on first read, or always derived.
+- How the close-time non-responsive determination is recorded: stored on first read, or always derived. (Built: always derived, audited on first read and on change.)
 - Bidder screens, within the existing look.
 
 ## Settled after the first draft (Drew, 2026-11-17)

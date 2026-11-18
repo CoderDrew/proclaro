@@ -143,8 +143,34 @@ Decisions made during the build:
 
 ## 2026-11-17 — Decided for the bid-submission slice
 
-- **Self-signup is allowed.** Users can create their own accounts. The design said staff don't self-sign up, so a self-signed-up account belongs to a bidder. It gets no agency or office role, and only an admin can grant one. Self-signup is still off in `supabase/config.toml` for now, because the app has no bidder role yet. The bid-submission slice turns it on together with bidder registration.
+- **Self-signup is allowed.** Users can create their own accounts. The design said staff don't self-sign up, so a self-signed-up account belongs to a bidder. It gets no agency or office role, and only an admin can grant one. Slice 2a turned it on in `supabase/config.toml` together with bidder registration.
 - **Addenda are in scope.** Changes to a published solicitation go through addenda. Each addendum increases the solicitation's version, as the setup design already anticipated. Bidders acknowledge every addendum on the bid form, and a missing acknowledgment means the bid is accepted but flagged for the agency, as the procurement office confirmed. Published versions themselves are never edited.
+
+## 2026-11-18 — Slice 2a, as built
+
+Bidder registration, sealed bid submission and opening. Design: `docs/superpowers/specs/2026-11-17-bid-submission-design.md`. Rulings that changed behaviour from the plan:
+
+- **Bidder roles.** Bidder is an organization kind. Solicitation inserts and updates are agency-only, and office staff profiles are hidden from bidders.
+- **Sealing.** The bid tables are sealed from every API role, `service_role` included, by revoke and by policy. Reads go through definer functions that check the database clock.
+- **Accepted limit (ruling 3).** The Supabase service key can read, replace or delete sealed bid files, can read their `storage.objects.owner` and `created_at` (which bidder user uploaded which file, and when), and can make the `bid-files` bucket public, because Storage owns that grant and a migration cannot revoke it. Bid prices stay sealed from it. App code never uses that key for bid files. A superuser can still read bids; encryption until close (approach 2) is deferred hardening.
+- **Tamper evidence (ruling 5).** Submit records each file's size, eTag and object id from `storage.objects`. Opening compares them with the live object and flags files that are missing or changed. It catches changes made through the Storage API, not writes made directly to the backing object store.
+- **Originals deadline.** An original counts only if it was received and logged by the bid due time. A void counts whenever it is made. An original for an older version counts for nothing.
+- **Non-responsive status.** It is derived at opening, never stored. The first read after close writes a `bid_close_determination` row to `bid_audit_log`, and later reads write another only if the result changes. Withdrawn bids are never opened. `bid_audit_log` is separate from `audit_log` so the slice 1 history keeps its shape and sealed-bid events have their own access rules.
+- **Ruling 8, deadline on the database clock.** Writers re-check `clock_timestamp() < bid_due_at` after taking the bid lock, so a submit or withdraw that straddles the deadline is refused with `bids_closed`. The plan's earlier "never `clock_timestamp()`" wording is amended.
+- **Bid bond.** Judged by the bidder's choice (electronic needs the file, paper does not). A paper bond's receipt is shown to the office, not enforced. The cure is 2b.
+- **Names.** Bid reference `XXXX-XXXX`; `bid_drafts.version` is the version the draft will become (submit checks it is latest + 1). Seeded solicitation 27-0002 closes about 20 minutes after `db:reset`, so the opening can be tried locally.
+- **Bidder-org guard (final review).** Only `register_bidder` can put a profile into a bidder org: a trigger on `profiles` refuses it otherwise, for `service_role` and admins too. Admins can't create or rename bidder orgs, and the invite page offers agencies and offices only.
+- **As-submitted names (final review).** Each submitted version records the bidder's legal name; the tabulation shows that, not the live organization name.
+- **Originals log clock (final review).** Logging an original locks the bid row (conflicting with opening's lock) and stamps `logged_at` with the database clock after the lock, so a log whose transaction straddles the due time doesn't count.
+
+### Known gaps
+
+- **A real two-session race is not tested.** The opening lock is pinned by source checks; the clock re-checks are covered by single-transaction fixtures. There is no two-connection test yet.
+- **The first office view after close writes the close-determination audit row.** Nothing writes it at the due time itself; if no one opens the tabulation, no row exists yet.
+- **No committed browser test.** The walk-through was a one-off scripted Playwright run; nothing in the repo repeats it.
+- **Orphan uploaded objects stay.** A file uploaded and then removed or abandoned leaves its object in Storage until a cleanup job exists.
+- **The bidder home's open list uses the server clock.** The solicitation page asks the database; the list does not.
+- **Email confirmation is off locally.** It must be on before hosting.
 
 ## Open questions
 

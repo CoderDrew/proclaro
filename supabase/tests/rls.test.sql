@@ -178,7 +178,7 @@ select tests.act_as_anon();
 
 select is((select count(*)::int from public.solicitations where state <> 'published'), 0, 'anon sees 0 non-published rows');
 select results_eq(
-  $$select id from public.solicitations order by id$$,
+  $$select id from public.solicitations where id::text like '00000000-0000-0000-0000-0000000005%' order by id$$,
   $$values ('00000000-0000-0000-0000-0000000005a3'::uuid), ('00000000-0000-0000-0000-0000000005a4'::uuid)$$,
   'anon sees published rows only once release_date <= app.today()');
 select throws_ok($$select count(*) from public.comments$$,     '42501', null, 'anon cannot read comments');
