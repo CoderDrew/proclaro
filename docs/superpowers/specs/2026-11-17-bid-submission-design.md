@@ -128,7 +128,13 @@ Slice 2 is split into three parts, agreed with Drew on 2026-11-17:
 | Anon | Nothing | Nothing |
 
 ### Audit
-Every submit, replace, original-log entry, void and close-time non-responsive determination writes an audit row.
+Each of these writes an audit row:
+- submit
+- replace
+- withdrawal
+- original-log entry
+- void
+- close-time non-responsive determination
 
 ## Left to the builder
 - Table and function names and shapes.
@@ -137,6 +143,6 @@ Every submit, replace, original-log entry, void and close-time non-responsive de
 - How the close-time non-responsive determination is recorded: stored on first read, or always derived.
 - Bidder screens, within the existing look.
 
-## Open for Drew (to settle before approval)
-- Can a bidder withdraw a bid before close, rather than only replace it? (The real process allows withdrawal before opening.)
-- Must a bidder register per solicitation (plan holder), or can any registered bidder bid on any open solicitation?
+## Settled after the first draft (Drew, 2026-11-17)
+- **Any registered bidder can bid on any open solicitation.** There is no per-solicitation registration and no plan holders list.
+- **A bidder can withdraw a submitted bid before close.** Withdrawal is refused at or after `bid_due_at`. A withdrawn bid is not opened and does not appear in the tabulation. Withdrawing writes an audit row, and the receipt shows the bid as withdrawn. *(My call: a bidder who withdraws can still submit a new version before close. That version needs its own mailed original.)*
