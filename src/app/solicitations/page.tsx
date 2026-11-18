@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createServerClient } from "@/lib/supabase/server";
 import { todayIn } from "@/domain/time";
-import { bidStatus, formatInstant, onlyPublic } from "./status";
+import { DateTime, EmptyState, Page, PageHeader, StatusBadge, Table, Td, Th } from "@/components/ui";
+import { bidStatus, onlyPublic } from "./status";
 
 export const dynamic = "force-dynamic";
 
@@ -24,31 +25,31 @@ export default async function SolicitationsPage() {
   const agency = new Map(orgs.data!.map((o) => [o.id, o.name]));
 
   return (
-    <main>
-      <h1>Solicitations</h1>
+    <Page width="full">
+      <PageHeader title="Solicitations" />
       {rows.data!.length === 0 ? (
-        <p>No solicitations are open for bidding right now.</p>
+        <EmptyState>No solicitations are open for bidding right now.</EmptyState>
       ) : (
-        <table className="list">
+        <Table>
           <thead>
-            <tr><th>Number</th><th>Title</th><th>Agency</th><th>Bid due</th><th>Status</th></tr>
+            <tr><Th>Number</Th><Th>Title</Th><Th>Agency</Th><Th>Bid due</Th><Th>Status</Th></tr>
           </thead>
           <tbody>
             {rows.data!.map((r) => {
               const title = (r.data as { longTitle?: string } | null)?.longTitle || "(untitled)";
               return (
                 <tr key={r.number}>
-                  <td><Link href={`/solicitations/${r.number}`}>{r.number}</Link></td>
-                  <td>{title}</td>
-                  <td>{agency.get(r.agency_id) ?? ""}</td>
-                  <td>{r.bid_due_at ? formatInstant(r.bid_due_at, tz) : "-"}</td>
-                  <td><span className="status-pill">{bidStatus(r.bid_due_at, now)}</span></td>
+                  <Td><Link href={`/solicitations/${r.number}`}>{r.number}</Link></Td>
+                  <Td>{title}</Td>
+                  <Td>{agency.get(r.agency_id) ?? ""}</Td>
+                  <Td>{r.bid_due_at ? <DateTime iso={r.bid_due_at} tz={tz} /> : "-"}</Td>
+                  <Td><StatusBadge status={{ kind: "bidding", status: bidStatus(r.bid_due_at, now) }} /></Td>
                 </tr>
               );
             })}
           </tbody>
-        </table>
+        </Table>
       )}
-    </main>
+    </Page>
   );
 }

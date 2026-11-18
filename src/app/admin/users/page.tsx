@@ -1,4 +1,5 @@
 import { createServerClient } from "@/lib/supabase/server";
+import { Card, Choice, Field, FieldGrid, Page, PageHeader, Table, Td, Th } from "@/components/ui";
 import { ActionForm } from "../ActionForm";
 import { requireAdminPage } from "../guard";
 import { createUser } from "./actions";
@@ -19,42 +20,42 @@ export default async function UsersPage() {
   const invitable = orgs.data!.filter((o) => (INVITABLE_ORG_KINDS as readonly string[]).includes(o.kind));
 
   return (
-    <main>
-      <p><a href="/admin">Administration</a></p>
-      <h1>Users</h1>
+    <Page width="full">
+      <PageHeader crumbs={<a href="/admin">Administration</a>} title="Users" />
 
-      <h2>Invite a user</h2>
-      <p>The user receives an email invitation. No self-signup exists for staff.</p>
-      <ActionForm action={createUser} submitLabel="Send invitation" className="sol-form">
-        <div className="row">
-          <label>Email <input name="email" type="email" required /></label>
-          <label>Display name <input name="displayName" required /></label>
-          <label>
-            Organization{" "}
-            <select name="orgId" required defaultValue="">
-              <option value="" disabled>Choose...</option>
-              {invitable.map((o) => (
-                <option key={o.id} value={o.id}>{o.name} ({o.kind})</option>
-              ))}
-            </select>
-          </label>
-          <label className="inline"><input name="isAdmin" type="checkbox" /> Administrator</label>
-        </div>
-      </ActionForm>
+      <Card title="Invite a user">
+        <p className="muted">The user receives an email invitation. No self-signup exists for staff.</p>
+        <ActionForm action={createUser} submitLabel="Send invitation" className="ui-form">
+          <FieldGrid>
+            <Field label="Email"><input name="email" type="email" required /></Field>
+            <Field label="Display name"><input name="displayName" required /></Field>
+            <Field label="Organization">
+              <select name="orgId" required defaultValue="">
+                <option value="" disabled>Choose...</option>
+                {invitable.map((o) => (
+                  <option key={o.id} value={o.id}>{o.name} ({o.kind})</option>
+                ))}
+              </select>
+            </Field>
+            <Choice label="Administrator"><input name="isAdmin" type="checkbox" /></Choice>
+          </FieldGrid>
+        </ActionForm>
+      </Card>
 
-      <h2>Existing users</h2>
-      <table className="list">
-        <thead><tr><th>Name</th><th>Organization</th><th>Administrator</th></tr></thead>
-        <tbody>
-          {profiles.data!.map((p) => (
-            <tr key={p.user_id}>
-              <td>{p.display_name}</td>
-              <td>{orgName.get(p.org_id) ?? ""}</td>
-              <td>{p.is_admin ? "Yes" : ""}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </main>
+      <Card title="Existing users">
+        <Table>
+          <thead><tr><Th>Name</Th><Th>Organization</Th><Th>Administrator</Th></tr></thead>
+          <tbody>
+            {profiles.data!.map((p) => (
+              <tr key={p.user_id}>
+                <Td>{p.display_name}</Td>
+                <Td>{orgName.get(p.org_id) ?? ""}</Td>
+                <Td>{p.is_admin ? "Yes" : ""}</Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </Card>
+    </Page>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { createBrowserClient } from "@/lib/supabase/browser";
+import { Button } from "@/components/ui";
 import type { UploadSlot } from "@/domain/bid/types";
 import { bidMessageFor } from "@/app/bidder/solicitations/[id]/logic";
 
@@ -60,29 +61,32 @@ export function BidFileUploader({
   }
 
   return (
-    <div className="upload-row" data-slot={slot}>
-      <strong className="upload-title">{title}</strong>
-      <span className="upload-file">
+    <div className="ui-upload-row" data-slot={slot}>
+      <strong>{title}</strong>
+      <span>
         {current ? <span data-testid={`file-${slot}`}>{current.fileName}</span> : <span className="muted">No file yet</span>}
         {busy && <span> Working...</span>}
       </span>
-      <span className="upload-actions">
+      <span className="ui-upload-actions">
         {!disabled && (
           <>
             <input
               ref={input} type="file" className="visually-hidden" tabIndex={-1} aria-label={`Upload ${title}`} disabled={busy}
               onChange={(e) => { const f = e.target.files?.[0]; if (f) void pick(f); }}
             />
-            <button type="button" disabled={busy} onClick={() => input.current?.click()}>
+            <Button
+              type="button" variant="secondary" disabled={busy} aria-label={`${current ? "Replace file" : "Upload file"}: ${title}`}
+              onClick={() => input.current?.click()}
+            >
               {current ? "Replace file" : "Upload file"}
-            </button>
+            </Button>
             {current && (
-              <button type="button" className="link-button" disabled={busy} onClick={() => void remove()}>Remove</button>
+              <Button type="button" variant="link" aria-label={`Remove ${title}`} disabled={busy} onClick={() => void remove()}>Remove</Button>
             )}
           </>
         )}
       </span>
-      {error && <p role="alert" className="error upload-error">{error}</p>}
+      {error && <p role="alert" className="error ui-upload-error">{error}</p>}
     </div>
   );
 }

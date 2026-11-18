@@ -6,6 +6,7 @@ import { InvalidDataPanel } from "./InvalidDataPanel";
 import { parseStoredData } from "@/domain/solicitation/schema";
 import { submissionDateOf } from "./logic";
 import { ReviewPanel, type AuditRow } from "./ReviewPanel";
+import { Page, PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -92,12 +93,14 @@ export default async function OfficeSolicitationPage({ params }: { params: Promi
   if (data === null) {
     // Stored data that no longer matches the schema cannot be edited or published here; the agency must fix it.
     return (
-      <main>
-        <p style={{ margin: "0 0 8px" }}>
-          <a href="/office">Office queues</a>
-          {row.state === "published" && <> · <a href={`/office/solicitations/${id}/bids`}>Bids</a></>}
-        </p>
-        <h1>{row.number ?? "(unnumbered solicitation)"}</h1>
+      <Page width="full">
+        <PageHeader
+          crumbs={<>
+              <a href="/office">Office queues</a>
+              {row.state === "published" && <> · <a href={`/office/solicitations/${id}/bids`}>Bids</a></>}
+            </>}
+          title={row.number ?? "(unnumbered solicitation)"}
+        />
         <InvalidDataPanel
           id={id}
           state={row.state}
@@ -106,17 +109,20 @@ export default async function OfficeSolicitationPage({ params }: { params: Promi
           agencyName={agency.data!.name}
           audit={auditRows}
         />
-      </main>
+      </Page>
     );
   }
 
   return (
-    <main>
-      <p style={{ margin: "0 0 8px" }}>
-        <a href="/office">Office queues</a>
-        {row.state === "published" && <> · <a href={`/office/solicitations/${id}/bids`}>Bids</a></>}
-      </p>
-      <h1>{data.shortTitle || "(untitled)"}</h1>
+    <Page width="full">
+      <PageHeader
+        crumbs={<>
+          <a href="/office">Office queues</a>
+          {row.state === "published" && <> · <a href={`/office/solicitations/${id}/bids`}>Bids</a></>}
+        </>}
+        eyebrow={row.number ? `${row.number} · ${agency.data!.name}` : undefined}
+        title={data.shortTitle || "(untitled)"}
+      />
       <ReviewPanel
         key={`${row.state}:${row.reviewer_id}:${auditRows.length}`}
         id={id}
@@ -138,6 +144,6 @@ export default async function OfficeSolicitationPage({ params }: { params: Promi
         staff={staff.data.map((p) => ({ userId: p.user_id, name: p.display_name }))}
         audit={auditRows}
       />
-    </main>
+    </Page>
   );
 }

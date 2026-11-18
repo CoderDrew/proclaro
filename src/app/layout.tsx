@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { getSessionContext, homePathFor } from "@/lib/session";
+import { AppShell } from "@/components/ui/AppShell";
+import { getSessionContext } from "@/lib/session";
 import { createServerClient } from "@/lib/supabase/server";
-import { signOut } from "./login/actions";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Proclaro",
@@ -26,29 +28,11 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <body>
-        <header className="shell-header">
-          <a href={ctx ? homePathFor(ctx) : "/"}>
-            <strong>Proclaro</strong>
-          </a>
-          <Link href="/solicitations">Solicitations</Link>
-          <span className="spacer" />
-          {ctx ? (
-            <>
-              <span>
-                {ctx.displayName} · {orgName}
-                {ctx.isAdmin ? " · admin" : ""}
-              </span>
-              <form action={signOut}>
-                <button type="submit">Sign out</button>
-              </form>
-            </>
-          ) : (
-            <a href="/login">Sign in</a>
-          )}
-        </header>
-        <div className="shell-body">{children}</div>
+        <AppShell ctx={ctx} orgName={orgName}>
+          {children}
+        </AppShell>
       </body>
     </html>
   );

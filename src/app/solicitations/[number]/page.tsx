@@ -4,6 +4,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { formatDate, formatDateTime, formatTimeWithZone } from "@/documents/format";
 import { parseStoredData } from "@/domain/solicitation/schema";
 import { todayIn } from "@/domain/time";
+import { Card, Page, PageHeader, StatusBadge, Table, Td, Th } from "@/components/ui";
 import { bidStatus, formatInstant, onlyPublic } from "../status";
 
 export const dynamic = "force-dynamic";
@@ -70,32 +71,36 @@ export default async function SolicitationPage({ params }: { params: Promise<{ n
   }
 
   return (
-    <main>
-      <p style={{ margin: "0 0 8px" }}><Link href="/solicitations">All solicitations</Link></p>
-      <h1>{data.longTitle}</h1>
-      <p>
-        <strong>{number}</strong> <span className="status-pill">{status}</span> · {org.data.name}
-      </p>
+    <Page width="full">
+      <PageHeader
+        crumbs={<Link href="/solicitations">All solicitations</Link>}
+        eyebrow={`${number} · ${org.data.name}`}
+        title={data.longTitle}
+        actions={<StatusBadge status={{ kind: "bidding", status }} />}
+      />
 
-      <h2>Summary</h2>
-      <p>{data.summary}</p>
-      <p>{data.location.address}, {data.location.city}, {data.location.county}</p>
+      <Card title="Summary">
+        <p>{data.summary}</p>
+        <p>{data.location.address}, {data.location.city}, {data.location.county}</p>
+      </Card>
 
-      <h2>Key dates</h2>
-      <table className="list">
-        <tbody>
-          {dates.map(([k, v]) => <tr key={k}><th scope="row">{k}</th><td>{v}</td></tr>)}
-        </tbody>
-      </table>
+      <Card title="Key dates">
+        <Table>
+          <tbody>
+            {dates.map(([k, v]) => <tr key={k}><Th scope="row">{k}</Th><Td>{v}</Td></tr>)}
+          </tbody>
+        </Table>
+      </Card>
 
-      <h2>Documents</h2>
-      <ul>
-        <li>{rfbUrl ? <a href={rfbUrl}>Request for Bids (PDF)</a> : "Request for Bids (unavailable)"}</li>
-        <li>{bidFormUrl ? <a href={bidFormUrl}>Bid form (PDF)</a> : "Bid form (unavailable)"}</li>
-        {attachmentLinks.map((a, i) => (
-          <li key={i}>{a.url ? <a href={a.url}>{a.label}</a> : `${a.label} (unavailable)`}</li>
-        ))}
-      </ul>
-    </main>
+      <Card title="Documents">
+        <ul>
+          <li>{rfbUrl ? <a href={rfbUrl}>Request for Bids (PDF)</a> : "Request for Bids (unavailable)"}</li>
+          <li>{bidFormUrl ? <a href={bidFormUrl}>Bid form (PDF)</a> : "Bid form (unavailable)"}</li>
+          {attachmentLinks.map((a, i) => (
+            <li key={i}>{a.url ? <a href={a.url}>{a.label}</a> : `${a.label} (unavailable)`}</li>
+          ))}
+        </ul>
+      </Card>
+    </Page>
   );
 }

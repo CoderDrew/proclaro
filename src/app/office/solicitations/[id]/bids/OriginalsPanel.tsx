@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { logOriginal, voidOriginal } from "./actions";
 import { ITEM_LABELS, ORIGINAL_ITEMS } from "./logic";
 import type { ActionResult } from "../logic";
+import { Button, Card, EmptyState, Field, FieldGrid, Notice, StatusBadge, Table, Td, Th } from "@/components/ui";
 
 export interface IndexRow { reference: string; version: number; status: string }
 export interface EntryView {
@@ -65,26 +66,27 @@ export function OriginalsPanel(props: {
   const shortId = (id: string) => id.slice(0, 8);
 
   return (
-    <div style={{ display: "grid", gap: 16 }}>
-      <section>
-        <h2>Submitted bids</h2>
+    <div className="ui-stack">
+      <Card as="section" title="Submitted bids">
         {props.index.length === 0 ? (
-          <p>No bids have been submitted.</p>
+          <EmptyState>No bids have been submitted.</EmptyState>
         ) : (
-          <table className="list" data-testid="bid-index">
-            <thead><tr><th>Reference</th><th>Version</th><th>Status</th></tr></thead>
+          <Table data-testid="bid-index">
+            <thead><tr><Th>Reference</Th><Th>Version</Th><Th>Status</Th></tr></thead>
             <tbody>
               {props.index.map((r) => (
-                <tr key={`${r.reference}-${r.version}`}><td>{r.reference}</td><td>{r.version}</td><td>{r.status}</td></tr>
+                <tr key={`${r.reference}-${r.version}`}>
+                  <Td>{r.reference}</Td><Td>{r.version}</Td>
+                  <Td><StatusBadge status={{ kind: "bidVersion", status: r.status }} /></Td>
+                </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
-      </section>
+      </Card>
 
       {props.canWork && (
-        <section>
-          <h2>Log a mailed original</h2>
+        <Card as="section" title="Log a mailed original">
           <form
             className="sol-form"
             onSubmit={(e) => {
@@ -96,75 +98,89 @@ export function OriginalsPanel(props: {
               });
             }}
           >
-            <div className="row">
-              <label>Bid reference <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="XXXX-XXXX" /></label>
-              <label>Version <input type="number" min={1} step={1} value={version} onChange={(e) => setVersion(e.target.value)} style={{ width: 80 }} /></label>
-              <label>Item
+            <FieldGrid>
+              <Field label="Bid reference">
+                <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="XXXX-XXXX" />
+              </Field>
+              <Field label="Version">
+                <input type="number" min={1} step={1} value={version} onChange={(e) => setVersion(e.target.value)} className="ui-input-narrow" />
+              </Field>
+              <Field label="Item">
                 <select value={item} onChange={(e) => setItem(e.target.value)}>
                   {ORIGINAL_ITEMS.map((i) => <option key={i} value={i}>{ITEM_LABELS[i]}</option>)}
                 </select>
-              </label>
-              <label>Received at <input type="datetime-local" value={receivedAt} onChange={(e) => setReceivedAt(e.target.value)} /></label>
-              <button type="submit" disabled={busy}>Log</button>
-            </div>
-            <p style={{ margin: "4px 0 0", fontSize: 12 }}>
+              </Field>
+              <Field label="Received at">
+                <input type="datetime-local" value={receivedAt} onChange={(e) => setReceivedAt(e.target.value)} />
+              </Field>
+            </FieldGrid>
+            <p className="ui-actions">
+              <Button type="submit" variant="primary" disabled={busy}>Log</Button>
+            </p>
+            <p className="muted ui-office-note">
               Times are in the configured time zone. Leave &ldquo;Received at&rdquo; blank to use the current time.
             </p>
           </form>
-        </section>
+        </Card>
       )}
 
-      {message && <p role="alert" className="error">{message}</p>}
+      {message && <Notice tone="error" role="alert">{message}</Notice>}
 
-      <section>
-        <h2>Originals log</h2>
+      <Card as="section" title="Originals log">
         {props.entries.length === 0 ? (
-          <p>Nothing has been logged.</p>
+          <EmptyState>Nothing has been logged.</EmptyState>
         ) : (
-          <table className="list" data-testid="originals-log">
+          <Table data-testid="originals-log">
             <thead>
-              <tr><th>Entry</th><th>Logged</th><th>Reference</th><th>Version</th><th>Item</th><th>Received at</th><th>By</th><th /></tr>
+              <tr><Th>Entry</Th><Th>Logged</Th><Th>Reference</Th><Th>Version</Th><Th>Item</Th><Th>Received at</Th><Th>By</Th><Th /></tr>
             </thead>
             <tbody>
               {props.entries.map((e) => {
                 const struck = e.voidedReason !== null;
-                const cell = struck ? { textDecoration: "line-through" } : undefined;
+                const cell = struck ? "is-voided" : undefined;
                 return (
                   <tr key={e.id} data-testid={`entry-${e.id}`}>
-                    <td>{shortId(e.id)}</td>
-                    <td style={cell}>{e.logged}{e.afterDue && " (after the bid due time)"}</td>
-                    <td style={cell}>{e.reference}</td>
-                    <td style={cell}>{e.version}</td>
-                    <td style={cell}>{e.item}</td>
-                    <td>
+                    <Td>{shortId(e.id)}</Td>
+                    <Td className={cell}>
+                      {e.logged}{e.afterDue && <> <StatusBadge status={{ kind: "logEntry", flag: "afterDue" }} /></>}
+                    </Td>
+                    <Td className={cell}>{e.reference}</Td>
+                    <Td className={cell}>{e.version}</Td>
+                    <Td className={cell}>{e.item}</Td>
+                    <Td>
                       {e.voidsEntryId ? (
                         <>Void of entry {shortId(e.voidsEntryId)}. Reason: {e.reason}</>
                       ) : (
-                        <span style={cell}>{e.received}</span>
+                        <span className={cell}>{e.received}</span>
                       )}
                       {struck && <div>Voided. Reason: {e.voidedReason}</div>}
-                    </td>
-                    <td>{e.by}</td>
-                    <td>
+                    </Td>
+                    <Td>{e.by}</Td>
+                    <Td>
                       {props.canWork && !e.voidsEntryId && !struck && voiding !== e.id && (
-                        <button type="button" disabled={busy} onClick={() => { setVoiding(e.id); setVoidReason(""); }}>Void</button>
+                        <Button type="button" variant="danger" disabled={busy} aria-label={`Void entry ${shortId(e.id)}`}
+                          onClick={() => { setVoiding(e.id); setVoidReason(""); }}>Void</Button>
                       )}
                       {voiding === e.id && (
-                        <div role="alertdialog" aria-label="Confirm void">
-                          <label>Reason <input value={voidReason} onChange={(ev) => setVoidReason(ev.target.value)} /></label>{" "}
-                          <button type="button" disabled={busy}
-                            onClick={() => void act(() => voidOriginal(e.id, voidReason), () => setVoiding(null))}>Confirm void</button>{" "}
-                          <button type="button" disabled={busy} onClick={() => setVoiding(null)}>Cancel</button>
-                        </div>
+                        <Notice tone="warning" role="alertdialog" aria-label="Confirm void" className="ui-void-confirm">
+                          <Field label="Reason">
+                            <input value={voidReason} onChange={(ev) => setVoidReason(ev.target.value)} />
+                          </Field>
+                          <span className="ui-inline-actions">
+                            <Button type="button" variant="danger" disabled={busy}
+                              onClick={() => void act(() => voidOriginal(e.id, voidReason), () => setVoiding(null))}>Confirm void</Button>
+                            <Button type="button" variant="secondary" disabled={busy} onClick={() => setVoiding(null)}>Cancel</Button>
+                          </span>
+                        </Notice>
                       )}
-                    </td>
+                    </Td>
                   </tr>
                 );
               })}
             </tbody>
-          </table>
+          </Table>
         )}
-      </section>
+      </Card>
     </div>
   );
 }

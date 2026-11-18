@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { returnToAgency, startReview } from "./actions";
 import { INVALID_STORED_DATA, type ActionResult } from "./logic";
 import type { AuditRow } from "./ReviewPanel";
+import { Button, Card, EmptyState, Field, Notice } from "@/components/ui";
 
 /**
  * Shown instead of the review form when the stored data does not match the schema. Nothing can be edited,
@@ -39,22 +40,22 @@ export function InvalidDataPanel(props: {
   }
 
   return (
-    <section>
-      <p role="alert" className="error">{INVALID_STORED_DATA}</p>
-      <p style={{ margin: "0 0 8px" }}>{props.agencyName}</p>
-      {message && <p role="alert" className="error">{message}</p>}
+    <Card as="section">
+      <Notice tone="error" role="alert">{INVALID_STORED_DATA}</Notice>
+      <p className="ui-office-note">{props.agencyName}</p>
+      {message && <Notice tone="error" role="alert">{message}</Notice>}
 
       {props.canWork && state === "submitted" && (
-        <p><button type="button" disabled={busy} onClick={() => void act(() => startReview(id))}>Start review</button></p>
+        <p><Button type="button" variant="primary" disabled={busy} onClick={() => void act(() => startReview(id))}>Start review</Button></p>
       )}
       {props.canWork && state === "in_review" && props.isReviewer && (
         <>
-          <label>Comment to the agency
-            <textarea value={comment} onChange={(e) => setComment(e.target.value)} style={{ width: "100%" }} />
-          </label>
+          <Field label="Comment to the agency">
+            <textarea value={comment} onChange={(e) => setComment(e.target.value)} />
+          </Field>
           <p>
-            <button type="button" disabled={busy}
-              onClick={() => void act(() => returnToAgency(id, [{ field: null, body: comment }]))}>Return</button>
+            <Button type="button" variant="danger" disabled={busy}
+              onClick={() => void act(() => returnToAgency(id, [{ field: null, body: comment }]))}>Return</Button>
           </p>
         </>
       )}
@@ -62,14 +63,14 @@ export function InvalidDataPanel(props: {
         <p>Only the assigned reviewer can return this solicitation.</p>
       )}
 
-      <h2>History</h2>
-      {props.audit.length === 0 ? <p>No history yet.</p> : (
-        <ul style={{ margin: 0, paddingLeft: 16 }}>
+      <h2 className="ui-card-title">History</h2>
+      {props.audit.length === 0 ? <EmptyState>No history yet.</EmptyState> : (
+        <ul className="ui-timeline">
           {props.audit.map((a) => (
             <li key={a.id}><strong>{a.action}</strong> by {a.actor}, {a.when}{a.reason && <div>{a.reason}</div>}</li>
           ))}
         </ul>
       )}
-    </section>
+    </Card>
   );
 }

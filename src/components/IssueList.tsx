@@ -23,7 +23,10 @@ export function IssueList({
             {kind === "warning" && (done ? (
               <em> Acknowledged.</em>
             ) : onAck ? (
-              <button type="button" disabled={disabled} onClick={() => onAck(i)}>Acknowledge</button>
+              <button
+                type="button" disabled={disabled} aria-label={`Acknowledge: ${i.message}`}
+                onClick={() => onAck(i)}
+              >Acknowledge</button>
             ) : null)}
           </li>
         );

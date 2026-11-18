@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { parseStoredData } from "@/domain/solicitation/schema";
 import { createServerClient } from "@/lib/supabase/server";
+import { Notice, Page, PageHeader } from "@/components/ui";
 import { requireAgencyPage } from "../../guard";
 import { SolicitationForm } from "./SolicitationForm";
 
@@ -35,21 +36,19 @@ export default async function SolicitationPage({ params }: { params: Promise<{ i
   const data = parseStoredData(row.data);
   if (data === null) {
     return (
-      <main>
-        <p style={{ margin: "0 0 8px" }}><a href="/agency">My solicitations</a></p>
-        <h1>{row.number ?? "Solicitation"}</h1>
-        <p role="alert" className="error">
+      <Page width="full">
+        <PageHeader crumbs={<a href="/agency">My solicitations</a>} title={row.number ?? "Solicitation"} />
+        <Notice tone="error" role="alert">
           This solicitation&apos;s saved data could not be read, so it cannot be shown or edited here.
           Contact the procurement office.
-        </p>
-      </main>
+        </Notice>
+      </Page>
     );
   }
 
   return (
-    <main>
-      <p style={{ margin: "0 0 8px" }}><a href="/agency">My solicitations</a></p>
-      <h1>{data.shortTitle || "New solicitation"}</h1>
+    <Page width="full">
+      <PageHeader crumbs={<a href="/agency">My solicitations</a>} title={data.shortTitle || "New solicitation"} />
       <SolicitationForm
         id={id}
         initial={data}
@@ -60,6 +59,6 @@ export default async function SolicitationPage({ params }: { params: Promise<{ i
         acks={acks.data!.map((a) => `${a.code}|${a.field ?? ""}`)}
         comments={comments.data!.map((c) => ({ field: c.field, body: c.body }))}
       />
-    </main>
+    </Page>
   );
 }

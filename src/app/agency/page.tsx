@@ -1,6 +1,7 @@
 import { todayIn } from "@/domain/time";
 import { createServerClient } from "@/lib/supabase/server";
 import { createSolicitation } from "./solicitations/new/actions";
+import { Button, Card, EmptyState, Page, PageHeader, StatusBadge, Table, Td, Th } from "@/components/ui";
 import { requireAgencyPage } from "./guard";
 
 export const dynamic = "force-dynamic";
@@ -25,33 +26,39 @@ export default async function AgencyHome() {
   }
 
   return (
-    <main>
-      <h1>My solicitations</h1>
-      <form action={create} style={{ margin: "0 0 12px" }}>
-        <button type="submit">New solicitation</button>
-      </form>
+    <Page width="full">
+      <PageHeader
+        title="My solicitations"
+        actions={(
+          <form action={create}>
+            <Button type="submit" variant="primary">New solicitation</Button>
+          </form>
+        )}
+      />
+      <Card>
       {rows.length === 0 ? (
-        <p>No solicitations yet.</p>
+        <EmptyState>No solicitations yet.</EmptyState>
       ) : (
-        <table className="list">
+        <Table>
           <thead>
-            <tr><th>Number</th><th>Title</th><th>State</th><th>Created</th></tr>
+            <tr><Th>Number</Th><Th>Title</Th><Th>State</Th><Th>Created</Th></tr>
           </thead>
           <tbody>
             {rows.map((r) => {
               const title = (r.data as { shortTitle?: string } | null)?.shortTitle || "(untitled draft)";
               return (
                 <tr key={r.id}>
-                  <td>{r.number ?? "-"}</td>
-                  <td><a href={`/agency/solicitations/${r.id}`}>{title}</a></td>
-                  <td><span className="status-pill">{r.state}</span></td>
-                  <td>{todayIn(tz, new Date(r.created_at))}</td>
+                  <Td>{r.number ?? "-"}</Td>
+                  <Td><a href={`/agency/solicitations/${r.id}`}>{title}</a></Td>
+                  <Td><StatusBadge status={{ kind: "solicitation", state: r.state }} /></Td>
+                  <Td>{todayIn(tz, new Date(r.created_at))}</Td>
                 </tr>
               );
             })}
           </tbody>
-        </table>
+        </Table>
       )}
-    </main>
+      </Card>
+    </Page>
   );
 }

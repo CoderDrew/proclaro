@@ -17,6 +17,10 @@ npm run dev
 
 Other scripts: `db:reset`, `db:test`, and `db:types` (regenerates `src/lib/supabase/database.types.ts`).
 
+## UI components
+
+Shared building blocks (shell, nav, page header, cards, buttons, fields, tables, status badges, notices, money and dates) live in `src/components/ui/`. Colours, spacing, type and radii are tokens in `src/styles/tokens.css`; component rules are in `src/styles/components.css`. Use these rather than inline styles.
+
 ## Seeded users
 
 `npm run db:reset` loads fictional users for the State of Calder. Sign in at `/login`. Each user's password is a local seed value defined in `supabase/seed.sql`; it is for the local stack only.

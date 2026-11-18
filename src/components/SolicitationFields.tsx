@@ -7,6 +7,7 @@ import type { Issue } from "@/domain/solicitation/validate";
 import type { deriveRequirements } from "@/domain/solicitation/valueBands";
 import { AttachmentUploader } from "@/components/AttachmentUploader";
 import { IssueList } from "@/components/IssueList";
+import { Choice, Field as UiField } from "@/components/ui";
 
 export interface ReturnComment { field: string | null; body: string }
 
@@ -37,11 +38,11 @@ interface FieldCtxValue {
 const FieldCtx = createContext<FieldCtxValue | null>(null);
 
 // A real top-level component (not defined inside the form) so inputs keep focus across renders.
-function Field({ label, field, wide, children }: { label: string; field?: string; wide?: boolean; children: ReactNode }) {
+function Field({ label, field, wide, labelId, children }: { label: string; field?: string; wide?: boolean; labelId?: string; children: ReactNode }) {
   const c = useContext(FieldCtx)!;
   return (
-    <div className={wide ? "wide" : undefined}>
-      <label>{label}{children}</label>
+    <div className={wide ? "sol-cell sol-cell--wide" : "sol-cell"}>
+      <UiField label={label} labelId={labelId}>{children}</UiField>
       {field && (
         <>
           <IssueList issues={c.errors.filter((i) => i.field === field)} kind="error" />
@@ -68,16 +69,21 @@ function FieldComments({ field }: { field: string }) {
   );
 }
 
-function MoneyInput({ cents, onChange }: { cents: number | null; onChange: (c: number | null) => void }) {
+function MoneyInput({
+  cents, onChange, ...aria
+}: {
+  cents: number | null; onChange: (c: number | null) => void;
+  id?: string; "aria-describedby"?: string; "aria-invalid"?: boolean;
+}) {
   const [text, setText] = useState(cents === null ? "" : formatMoney(cents));
   const bad = text.trim() !== "" && parseMoney(text) === null;
   return (
     <>
       <input
-        inputMode="decimal" value={text} placeholder="$0.00"
+        {...aria} inputMode="decimal" value={text} placeholder="$0.00"
         onChange={(e) => { setText(e.target.value); onChange(parseMoney(e.target.value)); }}
       />
-      {bad && <span className="issues issues-error">Enter an amount like $150,000.00.</span>}
+      {bad && <span className="ui-field-error">Enter an amount like $150,000.00.</span>}
     </>
   );
 }
@@ -125,9 +131,10 @@ export function SolicitationFields({
   );
   const dateTimeField = (label: string, path: "questionsDue" | "answersDue") => {
     const v = data[path];
+    const labelId = `${path}-label`;
     return (
-      <Field label={label} field={path}>
-        <span className="row">
+      <Field label={label} field={path} labelId={labelId}>
+        <span className="row" role="group" aria-labelledby={labelId}>
           <input
             type="date" aria-label={`${label} date`} value={v?.date ?? ""}
             onChange={(e) => set(path, e.target.value ? { date: e.target.value, time: v?.time ?? "13:00" } : null)}
@@ -142,7 +149,7 @@ export function SolicitationFields({
   };
   const contact = (title: string, who: "requester" | "projectManager") => (
     <>
-      <h4 className="wide" style={{ margin: "4px 0 0" }}>{title}</h4>
+      <h4 className="sol-cell--wide sol-subhead">{title}</h4>
       {text(`${title} name`, `${who}.name`)}
       {text(`${title} email`, `${who}.email`, "email")}
       {text(`${title} phone`, `${who}.phone`, "tel")}
@@ -164,10 +171,10 @@ export function SolicitationFields({
   return (
     <FieldCtx.Provider value={fieldCtx}>
         <form className="sol-form" onSubmit={(e) => e.preventDefault()}>
-          <fieldset disabled={!editable} style={{ border: 0, padding: 0, margin: 0 }}>
+          <fieldset disabled={!editable} className="ui-fieldset-reset">
             <fieldset>
               <legend>Identity</legend>
-              <div className="grid">
+              <div className="ui-field-grid ui-field-grid--auto">
                 {text("Short title (30 characters max)", "shortTitle")}
                 {text("Long title", "longTitle")}
                 <Field label="Category" field="category">
@@ -190,7 +197,7 @@ export function SolicitationFields({
 
             <fieldset>
               <legend>Money</legend>
-              <div className="grid">
+              <div className="ui-field-grid ui-field-grid--auto">
                 <Field label="Estimated cost" field="estimateCents">
                   <MoneyInput cents={data.estimateCents} onChange={(c) => set("estimateCents", c)} />
                 </Field>
@@ -218,7 +225,7 @@ export function SolicitationFields({
 
             <fieldset>
               <legend>Dates</legend>
-              <div className="grid">
+              <div className="ui-field-grid ui-field-grid--auto">
                 {dateField("Requested release date", "releaseDate")}
                 {dateField("Advertisement start", "adStart")}
                 {dateField("Advertisement end", "adEnd")}
@@ -241,7 +248,7 @@ export function SolicitationFields({
 
             <fieldset>
               <legend>Pre-bid meeting</legend>
-              <div className="grid">
+              <div className="ui-field-grid ui-field-grid--auto">
                 <Field label="Pre-bid meeting" field="preBid.kind">
                   <select value={data.preBid.kind} onChange={(e) => set("preBid.kind", e.target.value)}>
                     <option value="none">None</option>
@@ -266,13 +273,12 @@ export function SolicitationFields({
                     {text("Location or connection details", "preBid.location")}
                   </>
                 )}
-                <label className="inline wide">
+                <Choice className="sol-cell--wide" label="Facility requires a background check (optional)">
                   <input
                     type="checkbox" checked={data.backgroundCheck.required}
                     onChange={(e) => set("backgroundCheck.required", e.target.checked)}
                   />
-                  Facility requires a background check (optional)
-                </label>
+                </Choice>
                 {data.backgroundCheck.required && (
                   <>
                     {text("Background-check contact", "backgroundCheck.contact")}
@@ -289,7 +295,7 @@ export function SolicitationFields({
 
             <fieldset>
               <legend>Bid schedule</legend>
-              <p style={{ margin: "0 0 6px" }}>Lump-sum line items. The bid form adds a total line.</p>
+              <p className="sol-note sol-note--below">Lump-sum line items. The bid form adds a total line.</p>
               {data.schedule.items.map((it, i) => (
                 <div key={i} className="row">
                   <Field label="Item name" field={`schedule.items.${i}.name`}>
@@ -298,7 +304,10 @@ export function SolicitationFields({
                   <Field label="Description (optional)">
                     <input value={it.description} onChange={(e) => set(`schedule.items.${i}.description`, e.target.value)} />
                   </Field>
-                  <button type="button" onClick={() => set("schedule.items", data.schedule.items.filter((_, j) => j !== i))}>Remove</button>
+                  <button
+                    type="button" aria-label={`Remove item ${i + 1}`}
+                    onClick={() => set("schedule.items", data.schedule.items.filter((_, j) => j !== i))}
+                  >Remove</button>
                 </div>
               ))}
               <IssueList issues={errors.filter((i) => i.field === "schedule.items")} kind="error" />
@@ -306,7 +315,7 @@ export function SolicitationFields({
               <button type="button" onClick={() => set("schedule.items", [...data.schedule.items, { name: "", description: "" }])}>
                 Add line item
               </button>
-              <h4 style={{ margin: "10px 0 4px" }}>Alternates (optional)</h4>
+              <h4 className="sol-subhead sol-subhead--spaced">Alternates (optional)</h4>
               {data.schedule.alternates.map((alt, i) => (
                 <div key={i} className="row">
                   <select aria-label="Alternate kind" value={alt.kind} onChange={(e) => set(`schedule.alternates.${i}.kind`, e.target.value)}>
@@ -317,7 +326,10 @@ export function SolicitationFields({
                     aria-label="Alternate description" value={alt.description}
                     onChange={(e) => set(`schedule.alternates.${i}.description`, e.target.value)}
                   />
-                  <button type="button" onClick={() => set("schedule.alternates", data.schedule.alternates.filter((_, j) => j !== i))}>Remove</button>
+                  <button
+                    type="button" aria-label={`Remove alternate ${i + 1}`}
+                    onClick={() => set("schedule.alternates", data.schedule.alternates.filter((_, j) => j !== i))}
+                  >Remove</button>
                 </div>
               ))}
               <button type="button" onClick={() => set("schedule.alternates", [...data.schedule.alternates, { kind: "additive", description: "" }])}>
@@ -327,12 +339,12 @@ export function SolicitationFields({
 
             <fieldset>
               <legend>Bid content</legend>
-              <p style={{ margin: "0 0 6px" }}>Sections required by the estimate are locked on. Page limits are printed, not checked.</p>
+              <p className="sol-note sol-note--below">Sections required by the estimate are locked on. Page limits are printed, not checked.</p>
               {requiredSections.map((s) => {
                 const optional = (OPTIONAL_SECTIONS as readonly string[]).includes(s);
                 return (
                   <div key={s} className="row">
-                    <label className="inline">
+                    <Choice label={`${SECTION_LABELS[s]}${optional ? "" : " (required)"}`}>
                       <input
                         type="checkbox" checked disabled={!optional}
                         onChange={() => {
@@ -345,11 +357,10 @@ export function SolicitationFields({
                           });
                         }}
                       />
-                      {SECTION_LABELS[s]}{optional ? "" : " (required)"}
-                    </label>
-                    <label className="inline">Page limit
+                    </Choice>
+                    <label className="sol-inline">Page limit
                       <input
-                        type="number" min={1} style={{ width: 70 }} value={data.pageLimits[s] ?? ""}
+                        type="number" min={1} className="sol-narrow" value={data.pageLimits[s] ?? ""}
                         onChange={(e) => {
                           const next = { ...getLatest().pageLimits };
                           if (e.target.value === "") delete next[s]; else next[s] = Number(e.target.value);
@@ -362,17 +373,16 @@ export function SolicitationFields({
               })}
               {OPTIONAL_SECTIONS.filter((s) => !data.optionalSections.includes(s)).map((s) => (
                 <div key={s} className="row">
-                  <label className="inline">
+                  <Choice label={`${SECTION_LABELS[s]} (optional)`}>
                     <input type="checkbox" checked={false} onChange={() => set("optionalSections", [...data.optionalSections, s])} />
-                    {SECTION_LABELS[s]} (optional)
-                  </label>
+                  </Choice>
                 </div>
               ))}
             </fieldset>
 
             <fieldset>
               <legend>Author-editable text</legend>
-              <div className="grid">
+              <div className="ui-field-grid ui-field-grid--auto">
                 {area("Project-specific scope notes (optional)", "scopeNotes")}
                 {area("Project-specific special provisions (optional)", "specialProvisions")}
               </div>

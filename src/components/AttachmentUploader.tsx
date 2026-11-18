@@ -6,6 +6,13 @@ import type { AttachmentKind, SolicitationData } from "@/domain/solicitation/typ
 
 type Attachment = SolicitationData["attachments"][number];
 
+/** "Remove <label>", numbered (1-based) when another attachment would get the same name. */
+function removeLabel(all: Attachment[], index: number, title: string): string {
+  const base = all[index].label || title;
+  const clash = all.some((o, i) => i !== index && (o.label || title) === base);
+  return `Remove ${base}${clash ? ` (${index + 1})` : ""}`;
+}
+
 /**
  * One upload slot per attachment kind. The file goes browser -> Storage through a signed upload URL
  * (never through a server action body), then the attachment is added with its storagePath.
@@ -59,7 +66,7 @@ export function AttachmentUploader({
             onChange={(e) => patch(index, { label: e.target.value })}
           />
           {needsIssueDate && (
-            <label className="inline">Issue date
+            <label className="sol-inline">Issue date
               <input
                 type="date" value={a.issueDate ?? ""} disabled={disabled}
                 onChange={(e) => patch(index, { issueDate: e.target.value || null })}
@@ -67,7 +74,10 @@ export function AttachmentUploader({
             </label>
           )}
           {!disabled && (
-            <button type="button" onClick={() => onChange(attachments.filter((_, i) => i !== index))}>Remove</button>
+            <button
+              type="button" aria-label={removeLabel(attachments, index, title)}
+              onClick={() => onChange(attachments.filter((_, i) => i !== index))}
+            >Remove</button>
           )}
         </div>
       ))}

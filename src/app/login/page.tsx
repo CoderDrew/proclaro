@@ -2,28 +2,29 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
+import { Button, Card, Field, Notice, Page, PageHeader } from "@/components/ui";
 import { signIn } from "./actions";
 
 export default function LoginPage() {
   const [state, action, pending] = useActionState(signIn, undefined);
   return (
-    <main style={{ maxWidth: 360 }}>
-      <h1>Sign in</h1>
-      <form action={action} style={{ display: "grid", gap: 8 }}>
-        <label>
-          Email
-          <input name="email" type="email" autoComplete="username" required />
-        </label>
-        <label>
-          Password
-          <input name="password" type="password" autoComplete="current-password" required />
-        </label>
-        {state?.error && <p role="alert" className="error">{state.error}</p>}
-        <button type="submit" disabled={pending}>
-          {pending ? "Signing in..." : "Sign in"}
-        </button>
-      </form>
-      <p>New bidder? <Link href="/signup">Create an account</Link></p>
-    </main>
+    <Page width="narrow">
+      <Card>
+        <PageHeader title="Sign in" />
+        <form action={action} className="ui-form">
+          <Field label="Email">
+            <input name="email" type="email" autoComplete="username" required />
+          </Field>
+          <Field label="Password">
+            <input name="password" type="password" autoComplete="current-password" required />
+          </Field>
+          {state?.error && <Notice tone="error" role="alert">{state.error}</Notice>}
+          <Button type="submit" variant="primary" loading={pending}>
+            {pending ? "Signing in..." : "Sign in"}
+          </Button>
+        </form>
+        <p>New bidder? <Link href="/signup">Create an account</Link></p>
+      </Card>
+    </Page>
   );
 }

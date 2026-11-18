@@ -1,0 +1,552 @@
+/* Shared component styles (ui- prefixed classes). Disabled and read-only looks also come from globals.css. */
+
+/* Buttons */
+.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 8px 14px;
+  font: inherit;
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--color-control-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.ui-button--secondary:hover:not(:disabled) {
+  background: var(--color-page);
+}
+.ui-button--primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.ui-button--primary:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+.ui-button--danger {
+  background: var(--color-danger-solid);
+  border-color: var(--color-danger-solid);
+  color: var(--color-on-accent);
+}
+.ui-button--danger:hover:not(:disabled) {
+  background: var(--color-danger-solid);
+  filter: brightness(0.9);
+}
+.ui-button--link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+.ui-button--link:hover:not(:disabled) {
+  background: none;
+  color: var(--color-accent-hover);
+}
+.ui-button:disabled {
+  background: var(--color-disabled-bg);
+  border-color: var(--color-border);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: none;
+}
+.ui-button--link:disabled {
+  background: none;
+  border: none;
+  text-decoration: none;
+  opacity: 0.7;
+}
+
+/* Cards */
+.ui-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-5);
+}
+.ui-card + .ui-card {
+  margin-top: var(--space-4);
+}
+.ui-card-title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+/* Fields */
+.ui-field {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+}
+.ui-field--wide {
+  grid-column: 1 / -1;
+}
+.ui-field-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+.ui-field-hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.ui-field-error {
+  font-size: var(--text-xs);
+  color: var(--color-danger-text);
+}
+.ui-field-grid {
+  display: grid;
+  gap: var(--space-3) var(--space-4);
+}
+.ui-field-grid--auto {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.ui-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.ui-choice input {
+  margin: 0;
+}
+.ui-money-input {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.ui-money-input input {
+  text-align: right;
+}
+
+/* Notices */
+.ui-notice {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  border-left: 4px solid currentColor;
+}
+.ui-notice-title {
+  display: block;
+  margin-bottom: 2px;
+}
+.ui-notice--info {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+.ui-notice--success {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+.ui-notice--warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+.ui-notice--error {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+}
+
+/* Badges */
+.ui-badge {
+  display: inline-block;
+  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: 1.4;
+}
+.ui-badge--wrap {
+  white-space: normal;
+}
+.ui-badge--success {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+.ui-badge--danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+}
+.ui-badge--warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+.ui-badge--neutral {
+  background: var(--color-neutral-bg);
+  color: var(--color-neutral-text);
+}
+
+/* Tables */
+.ui-table-scroll {
+  overflow-x: auto;
+}
+.ui-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.ui-table th {
+  background: var(--color-page);
+  color: var(--color-text-muted);
+  font-weight: var(--weight-semibold);
+  text-align: left;
+}
+.ui-table th,
+.ui-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+.ui-table .ui-num {
+  text-align: right;
+}
+.ui-table tfoot th {
+  background: none;
+  color: var(--color-text);
+}
+.ui-empty {
+  color: var(--color-text-muted);
+  margin: var(--space-3) 0;
+}
+
+/* Stacked form (sign-in, sign-up, register, set password) */
+.ui-form {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+/* Page */
+.ui-page {
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4);
+}
+.ui-page--narrow {
+  max-width: 400px;
+}
+.ui-page--full {
+  max-width: var(--content-max);
+}
+.ui-page-header {
+  margin-bottom: var(--space-5);
+}
+.ui-crumbs {
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-2);
+}
+.ui-page-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.ui-page-header h1 {
+  margin: 0;
+}
+.ui-eyebrow {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+.ui-page-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/* App shell */
+.ui-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-5);
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.ui-wordmark {
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 1.125rem;
+}
+.ui-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  flex: 1 1 28rem;
+}
+.ui-nav a {
+  color: var(--color-text-muted);
+  text-decoration: none;
+  padding: var(--space-1) 0;
+  border-bottom: 2px solid transparent;
+}
+.ui-nav a:hover {
+  color: var(--color-text);
+}
+.ui-nav a[aria-current="page"] {
+  color: var(--color-text);
+  font-weight: 600;
+  border-bottom-color: var(--color-text);
+}
+.ui-topbar-user {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.ui-topbar-user form {
+  margin: 0;
+}
+.ui-content {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-5);
+}
+@media (max-width: 767px) {
+  .ui-topbar {
+    padding: var(--space-3) var(--space-4);
+  }
+  .ui-content {
+    padding: var(--space-4);
+  }
+}
+
+/* Bidder pages */
+.ui-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  margin-top: var(--space-3);
+}
+.ui-signout {
+  margin-top: var(--space-4);
+}
+.ui-receipts {
+  margin: 0 0 var(--space-3);
+  padding-left: var(--space-5);
+}
+.ui-receipts li + li {
+  margin-top: var(--space-1);
+}
+.ui-fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+.ui-upload-list {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  column-gap: var(--space-4);
+  align-items: center;
+}
+.ui-upload-row {
+  display: contents;
+}
+.ui-upload-row > * {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.ui-upload-actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+.ui-upload-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.ui-notice + .ui-actions,
+.ui-notice + .ui-notice,
+.ui-table-scroll + .ui-actions,
+.ui-card > .ui-notice,
+.ui-card > p + .ui-notice {
+  margin-top: var(--space-3);
+}
+.bid-draft > .ui-card,
+.bid-draft > .ui-notice {
+  margin-top: var(--space-4);
+}
+@media (max-width: 767px) {
+  .ui-upload-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The solicitation form's outer wrapper fieldset (it exists only to disable every control at once). Scoped to
+   .sol-form so it outranks the boxed `.sol-form fieldset` rule in globals.css; it does nothing elsewhere. */
+.sol-form fieldset.ui-fieldset-reset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  min-width: 0;
+}
+
+/* A bulleted list with no extra outer margin; usable anywhere. */
+.ui-plain-list {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+/* Office pages */
+.ui-segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 0 var(--space-3);
+  padding: 2px;
+  background: var(--color-neutral-bg);
+  border-radius: var(--radius-control);
+}
+.ui-segmented > a,
+.ui-segmented > strong {
+  padding: 4px 12px;
+  border-radius: var(--radius-control);
+  font-size: var(--text-sm);
+}
+.ui-segmented > strong {
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+.ui-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--space-3);
+  border-left: 2px solid var(--color-border);
+  display: grid;
+  gap: var(--space-2);
+}
+.ui-timeline ul {
+  margin: 2px 0 0;
+  padding-left: var(--space-4);
+}
+.ui-input-narrow {
+  width: 80px;
+}
+.ui-table tr.is-danger td {
+  background: var(--color-danger-bg);
+}
+/* A danger badge on a danger-tinted row would vanish: give it a surface fill and a border. */
+.ui-table tr.is-danger .ui-badge--danger {
+  background: var(--color-surface);
+  border: 1px solid var(--color-danger-text);
+}
+.ui-table .is-voided {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+.ui-stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+.ui-stack-tight > * + * {
+  margin-top: var(--space-2);
+}
+.ui-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.ui-preview-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+.ui-card + .ui-stack,
+.ui-notice + .ui-stack,
+.ui-notice + .ui-card {
+  margin-top: var(--space-4);
+}
+.ui-office-note {
+  margin: 0 0 var(--space-2);
+}
+.ui-void-confirm {
+  display: grid;
+  gap: var(--space-2);
+}
+@media (max-width: 899px) {
+  .ui-preview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.ui-comment-row {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+}
+.ui-comment-row > select,
+.ui-comment-row > textarea {
+  width: 100%;
+}
+.ui-comment-row > .ui-button {
+  justify-self: start;
+}
+
+/* Admin pages */
+.ui-link-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+}
+.ui-link-grid > .ui-card + .ui-card {
+  margin-top: 0;
+}
+.ui-link-card a {
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-md);
+}
+.ui-link-card p {
+  margin: var(--space-1) 0 0;
+}
+.ui-form > .ui-button {
+  justify-self: start;
+}
+.ui-form textarea {
+  width: 100%;
+}
+.ui-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.ui-inline-status {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+}
+.ui-form > .ui-inline-status {
+  justify-self: start;
+}
+.ui-pre {
+  white-space: pre-wrap;
+  background: var(--color-page);
+  padding: var(--space-2);
+  border-radius: var(--radius-control);
+  margin: var(--space-1) 0 0;
+}
+.ui-code-list {
+  margin-right: var(--space-2);
+}
+.ui-clause-version {
+  margin: var(--space-2) 0;
+}
+.ui-form .ui-field {
+  min-width: 0;
+}
+.ui-form .ui-field select {
+  max-width: 100%;
+}

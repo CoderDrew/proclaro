@@ -1,3 +1,4 @@
+import { Card, Page, PageHeader } from "@/components/ui";
 import { requireAdminPage } from "./guard";
 
 export const dynamic = "force-dynamic";
@@ -13,15 +14,16 @@ const LINKS = [
 export default async function AdminHome() {
   await requireAdminPage();
   return (
-    <main>
-      <h1>Administration</h1>
-      <ul>
+    <Page width="full">
+      <PageHeader title="Administration" />
+      <div className="ui-link-grid">
         {LINKS.map(([href, name, blurb]) => (
-          <li key={href}>
-            <a href={href}>{name}</a> - {blurb}
-          </li>
+          <Card key={href} className="ui-link-card">
+            <a href={href}>{name}</a>
+            <p className="muted">{blurb}</p>
+          </Card>
         ))}
-      </ul>
-    </main>
+      </div>
+    </Page>
   );
 }

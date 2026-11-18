@@ -4,6 +4,7 @@ import { parseStoredData } from "@/domain/solicitation/schema";
 import { todayIn } from "@/domain/time";
 import { createServerClient } from "@/lib/supabase/server";
 import { formatInstant, onlyPublic } from "@/app/solicitations/status";
+import { Notice, Page, PageHeader } from "@/components/ui";
 import { requireBidderPage } from "../../guard";
 import { BidDraftForm, PrintBlankFormButton, StartBidButton } from "./BidDraftForm";
 import { ReceiptPanel } from "./ReceiptPanel";
@@ -33,10 +34,10 @@ export default async function BidderSolicitationPage({ params }: { params: Promi
   const data = parseStoredData((sol.data.published_snapshot as { data?: unknown } | null)?.data);
   if (!data) {
     return (
-      <main>
-        <p style={{ margin: "0 0 8px" }}><Link href="/bidder">Open solicitations</Link></p>
-        <p role="alert" className="error">This solicitation&apos;s data could not be read, so a bid cannot be prepared.</p>
-      </main>
+      <Page width="full">
+        <p className="ui-crumbs"><Link href="/bidder">Open solicitations</Link></p>
+        <Notice tone="error" role="alert">This solicitation&apos;s data could not be read, so a bid cannot be prepared.</Notice>
+      </Page>
     );
   }
   const dueAt = sol.data.bid_due_at;
@@ -53,20 +54,20 @@ export default async function BidderSolicitationPage({ params }: { params: Promi
   if (bid.error) throw new Error(bid.error.message);
 
   const heading = (
-    <>
-      <p style={{ margin: "0 0 8px" }}><Link href="/bidder">Open solicitations</Link></p>
-      <h1>{sol.data.number}: {data.longTitle || data.shortTitle || "Solicitation"}</h1>
-      {open && <PrintBlankFormButton solicitationId={id} />}
-    </>
+    <PageHeader
+      crumbs={<Link href="/bidder">Open solicitations</Link>}
+      title={`${sol.data.number}: ${data.longTitle || data.shortTitle || "Solicitation"}`}
+      actions={open ? <PrintBlankFormButton solicitationId={id} /> : undefined}
+    />
   );
 
   if (!bid.data) {
     return (
-      <main>
+      <Page width="full">
         {heading}
         <p>Bids are due {due}.</p>
         {closed ? <p>Bidding on this solicitation has closed.</p> : open ? <StartBidButton solicitationId={id} /> : <p>This solicitation is not open for bidding.</p>}
-      </main>
+      </Page>
     );
   }
 
@@ -90,18 +91,18 @@ export default async function BidderSolicitationPage({ params }: { params: Promi
 
   if (!draft.data) {
     return (
-      <main>
+      <Page width="full">
         {heading}
         <p>Bid reference: <strong>{bid.data.reference}</strong></p>
         <p>Bids are due {due}.{closed && " Bidding on this solicitation has closed."}</p>
         {rows.length === 0 ? <p>This bid has no submitted version.</p> : panel}
-      </main>
+      </Page>
     );
   }
 
   const bidDraft = toBidDraft(bid.data, draft.data, files.data ?? []);
   return (
-    <main>
+    <Page width="full">
       {heading}
       {panel}
       <BidDraftForm
@@ -122,6 +123,6 @@ export default async function BidderSolicitationPage({ params }: { params: Promi
           files: bidDraft.files,
         }}
       />
-    </main>
+    </Page>
   );
 }

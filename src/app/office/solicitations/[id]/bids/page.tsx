@@ -2,11 +2,11 @@ import { notFound } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
 import { formatInstant } from "@/app/solicitations/status";
 import { requireOfficePage } from "../../../guard";
-import { formatMoney } from "@/domain/money";
 import { UPLOAD_SLOT_LABELS } from "@/domain/bid/types";
 import type { SolicitationData } from "@/domain/solicitation/types";
 import { ITEM_LABELS, type OriginalItem } from "./logic";
 import { OriginalsPanel, type EntryView } from "./OriginalsPanel";
+import { Card, Money, Notice, Page, PageHeader, StatusBadge, Table, Td, Th, EmptyState } from "@/components/ui";
 import { toTabulation, type OpenedBid, type OpenedFile } from "./tabulation";
 
 export const dynamic = "force-dynamic";
@@ -35,19 +35,17 @@ export default async function OfficeBidsPage({ params }: { params: Promise<{ id:
   const title = (sol.data as { shortTitle?: string } | null)?.shortTitle || "(untitled)";
 
   const header = (
-    <>
-      <p style={{ margin: "0 0 8px" }}>
-        <a href="/office">Office queues</a> · <a href={`/office/solicitations/${id}`}>{sol.number ?? "Solicitation"}</a>
-      </p>
-      <h1>Bids: {title}</h1>
-    </>
+    <PageHeader
+      crumbs={<><a href="/office">Office queues</a> · <a href={`/office/solicitations/${id}`}>{sol.number ?? "Solicitation"}</a></>}
+      title={`Bids: ${title}`}
+    />
   );
 
   if (ctx.orgKind !== "office") {
-    return <main>{header}<p>Only office staff can view bids and log originals.</p></main>;
+    return <Page width="full">{header}<Notice tone="info">Only office staff can view bids and log originals.</Notice></Page>;
   }
   if (sol.state !== "published" || !sol.bid_due_at) {
-    return <main>{header}<p>This solicitation is not published, so it has no bids.</p></main>;
+    return <Page width="full">{header}<Notice tone="info">This solicitation is not published, so it has no bids.</Notice></Page>;
   }
 
   const [settings, index, log, officeOrgs] = await Promise.all([
@@ -86,7 +84,7 @@ export default async function OfficeBidsPage({ params }: { params: Promise<{ id:
   }));
 
   return (
-    <main>
+    <Page width="full">
       {header}
       <p>Bid due: {formatInstant(sol.bid_due_at, tz)}. A signed original counts only if it was received and logged by then.</p>
       {opening}
@@ -96,7 +94,7 @@ export default async function OfficeBidsPage({ params }: { params: Promise<{ id:
         entries={entries}
         canWork={ctx.orgKind === "office"}
       />
-    </main>
+    </Page>
   );
 }
 
@@ -109,7 +107,7 @@ async function openingSection(
   const opened = await supabase.rpc("opened_bids", { p_solicitation_id: id });
   if (opened.error) {
     if (opened.error.message === "sealed") {
-      return <p data-testid="sealed"><strong>Bids are sealed until {dueLocal}.</strong></p>;
+      return <Notice tone="warning" data-testid="sealed"><strong>Bids are sealed until {dueLocal}.</strong></Notice>;
     }
     throw new Error(opened.error.message);
   }
@@ -134,77 +132,75 @@ async function openingSection(
 
   return (
     <>
-      <section>
-        <h2>Tabulation (internal)</h2>
-        <p style={{ margin: "0 0 6px", fontSize: 13 }}>
+      <Card as="section" title="Tabulation (internal)">
+        <p className="muted ui-office-note">
           Computed from the submitted prices. Ordered by base total. Not for posting.
         </p>
         {tab.rows.length === 0 ? (
-          <p>No bids were opened.</p>
+          <EmptyState>No bids were opened.</EmptyState>
         ) : (
-          <table className="list" data-testid="tabulation">
+          <Table data-testid="tabulation">
             <thead>
               <tr>
-                <th>Bidder</th><th>Reference</th><th>Version</th><th>Base total</th>
-                {tab.headers.map((h) => <th key={h}>{h}</th>)}
-                <th>Signed original</th><th>Bid bond</th><th>Files</th>
+                <Th>Bidder</Th><Th>Reference</Th><Th>Version</Th><Th numeric>Base total</Th>
+                {tab.headers.map((h) => <Th key={h} numeric>{h}</Th>)}
+                <Th>Signed original</Th><Th>Bid bond</Th><Th>Files</Th>
               </tr>
             </thead>
             <tbody>
               {tab.rows.map((r) => (
-                <tr key={r.bidId} data-testid={`tab-${r.reference}`} style={r.reason ? { background: "#fdecea" } : undefined}>
-                  <td>{r.bidderName}</td>
-                  <td>{r.reference}</td>
-                  <td>{r.version}</td>
-                  <td style={{ textAlign: "right" }}>{r.baseTotal}</td>
-                  {r.alternates.map((a, i) => <td key={i} style={{ textAlign: "right" }}>{a}</td>)}
-                  <td>
-                    {r.reason ? <><strong>Non-responsive</strong>: {r.reason}</> : "Received"}
-                  </td>
-                  <td>{r.bond}</td>
-                  <td>
-                    {r.fileFlags.length === 0 ? "Unaltered" : (
-                      <strong role="alert">{r.fileFlags.join("; ")}</strong>
-                    )}
-                  </td>
-                </tr>
+                  <tr key={r.bidId} data-testid={`tab-${r.reference}`} className={r.reason ? "is-danger" : undefined}>
+                    <Td>{r.bidderName}</Td>
+                    <Td>{r.reference}</Td>
+                    <Td>{r.version}</Td>
+                    <Td numeric>{r.baseTotal}</Td>
+                    {r.alternates.map((a, i) => <Td key={i} numeric>{a}</Td>)}
+                    <Td>
+                      <StatusBadge status={{ kind: "original", received: !r.reason }} />
+                      {r.reason ? <>: {r.reason}</> : null}
+                    </Td>
+                    <Td>{r.bond}</Td>
+                    <Td>
+                      <StatusBadge status={{ kind: "files", flags: r.fileFlags }} role={r.fileFlags.length ? "alert" : undefined} />
+                    </Td>
+                  </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
-      </section>
+      </Card>
 
       {bids.map((b) => (
-        <section key={b.bid_id} data-testid={`opened-${b.reference}`}>
-          <h3>{b.bidder_name}: bid {b.reference}, version {b.version}</h3>
-          <table className="list">
-            <thead><tr><th>Line</th><th>Description</th><th>Price</th></tr></thead>
+        <Card as="section" key={b.bid_id} data-testid={`opened-${b.reference}`}
+          title={`${b.bidder_name}: bid ${b.reference}, version ${b.version}`}>
+          <Table>
+            <thead><tr><Th>Line</Th><Th>Description</Th><Th numeric>Price</Th></tr></thead>
             <tbody>
               {b.item_cents.map((c, i) => (
                 <tr key={`i${i}`}>
-                  <td>{items[i]?.name ?? `Item ${i + 1}`}</td><td>{items[i]?.description ?? ""}</td>
-                  <td style={{ textAlign: "right" }}>{formatMoney(c)}</td>
+                  <Td>{items[i]?.name ?? `Item ${i + 1}`}</Td><Td>{items[i]?.description ?? ""}</Td>
+                  <Td numeric><Money cents={c} /></Td>
                 </tr>
               ))}
-              <tr><td colSpan={2}><strong>Base total</strong></td><td style={{ textAlign: "right" }}><strong>{formatMoney(b.base_total_cents)}</strong></td></tr>
+              <tr><Td colSpan={2}><strong>Base total</strong></Td><Td numeric><strong><Money cents={b.base_total_cents} /></strong></Td></tr>
               {b.alternate_cents.map((c, i) => (
                 <tr key={`a${i}`}>
-                  <td>{tab.headers[i] ?? `Alternate ${i + 1}`}</td><td>{alternates[i]?.description ?? ""}</td>
-                  <td style={{ textAlign: "right" }}>{formatMoney(c)}</td>
+                  <Td>{tab.headers[i] ?? `Alternate ${i + 1}`}</Td><Td>{alternates[i]?.description ?? ""}</Td>
+                  <Td numeric><Money cents={c} /></Td>
                 </tr>
               ))}
             </tbody>
-          </table>
-          <ul>
+          </Table>
+          <ul className="ui-plain-list">
             {fileRows.filter((f) => f.bid_id === b.bid_id).map((f) => (
               <li key={f.path}>
                 {UPLOAD_SLOT_LABELS[f.slot] ?? f.slot}:{" "}
                 {links.has(f.path) ? <a href={links.get(f.path)}>{f.file_name}</a> : f.file_name}
-                {f.file_status !== "ok" && <strong> ({f.file_status} since submission)</strong>}
+                {f.file_status !== "ok" && <> <StatusBadge status={{ kind: "file", status: f.file_status }} /></>}
               </li>
             ))}
           </ul>
-        </section>
+        </Card>
       ))}
     </>
   );

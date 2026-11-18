@@ -6,6 +6,7 @@ import { todayIn } from "@/domain/time";
 import type { SolicitationData } from "@/domain/solicitation/types";
 import { validate, type Issue } from "@/domain/solicitation/validate";
 import { deriveRequirements } from "@/domain/solicitation/valueBands";
+import { Button, Card, Notice, StatusBadge } from "@/components/ui";
 import { IssueList, ackKey } from "@/components/IssueList";
 import { sidebarComments } from "@/components/fieldComments";
 import { RequirementsList } from "@/components/RequirementsList";
@@ -121,70 +122,66 @@ export function SolicitationForm(props: {
         }}
       />
 
-        <aside className="sol-side">
-          <section>
-            <h2>Status</h2>
-            <span className="status-pill">{props.state}</span>
-            {props.number && <> <strong>{props.number}</strong></>}
-            {editable ? (
-              <p style={{ margin: "6px 0 0" }}>
-                {status === "saved" && "All changes saved."}
-                {status === "dirty" && "Unsaved changes (autosaves after 5 seconds)."}
-                {status === "saving" && "Saving..."}
-                {status === "error" && "Save failed."}
-                {" "}
-                <button type="button" onClick={() => void save()} disabled={status === "saving"}>Save</button>
-              </p>
-            ) : (
-              <p style={{ margin: "6px 0 0" }}>This solicitation is read-only while it is {props.state.replace("_", " ")}.</p>
+      <aside className="sol-side">
+        <Card as="section" title="Status">
+          <StatusBadge status={{ kind: "solicitation", state: props.state }} />
+          {props.number && <> <strong>{props.number}</strong></>}
+          {editable ? (
+            <p className="sol-note">
+              {status === "saved" && "All changes saved."}
+              {status === "dirty" && "Unsaved changes (autosaves after 5 seconds)."}
+              {status === "saving" && "Saving..."}
+              {status === "error" && "Save failed."}
+              {" "}
+              <Button type="button" variant="secondary" onClick={() => void save()} disabled={status === "saving"}>Save</Button>
+            </p>
+          ) : (
+            <p className="sol-note">This solicitation is read-only while it is {props.state.replace("_", " ")}.</p>
+          )}
+          {message && <Notice tone="error" role="alert">{message}</Notice>}
+        </Card>
+
+        <Card as="section" title="Requirements">
+          <RequirementsList req={req} />
+        </Card>
+
+        <Card as="section" title={`Problems (${errors.length}) and warnings (${warnings.length})`}>
+          <IssueList issues={errors} kind="error" />
+          <IssueList issues={warnings} kind="warning" acked={acked} onAck={ack} disabled={!editable} />
+          {errors.length + warnings.length === 0 && <p className="sol-note sol-note--flush">None.</p>}
+        </Card>
+
+        {noFieldComments.length > 0 && (
+          <Card as="section" title="Office comments">
+            {noFieldComments.map((c, i) => (
+              <Notice key={i} tone="warning">{c.field ? `${c.field}: ` : ""}{c.body}</Notice>
+            ))}
+          </Card>
+        )}
+
+        <Card as="section" title="Preview">
+          <a href={`/api/solicitations/${id}/preview?doc=rfb`} target="_blank" rel="noreferrer">Preview RFB</a>
+          {" · "}
+          <a href={`/api/solicitations/${id}/preview?doc=bid-form`} target="_blank" rel="noreferrer">Preview bid form</a>
+          <p className="sol-note">Previews show the last saved draft.</p>
+        </Card>
+
+        {editable && (
+          <Card as="section" title="Submit for office review">
+            <Button type="button" variant="primary" disabled={!canSubmit} onClick={() => void submit()}>
+              {submitting ? "Submitting..." : "Submit for review"}
+            </Button>
+            {!canSubmit && !submitting && <p className="sol-note">Fix all problems and acknowledge all warnings first.</p>}
+            {submitIssues && (
+              <>
+                <Notice tone="error" role="alert">The server did not accept the submission.</Notice>
+                <IssueList issues={submitIssues.errors} kind="error" />
+                <IssueList issues={submitIssues.unacknowledged} kind="warning" acked={acked} onAck={ack} />
+              </>
             )}
-            {message && <p role="alert" className="error">{message}</p>}
-          </section>
-
-          <section>
-            <h2>Requirements</h2>
-            <RequirementsList req={req} />
-          </section>
-
-          <section>
-            <h2>Problems ({errors.length}) and warnings ({warnings.length})</h2>
-            <IssueList issues={errors} kind="error" />
-            <IssueList issues={warnings} kind="warning" acked={acked} onAck={ack} disabled={!editable} />
-            {errors.length + warnings.length === 0 && <p style={{ margin: 0 }}>None.</p>}
-          </section>
-
-          {noFieldComments.length > 0 && (
-            <section>
-              <h2>Office comments</h2>
-              {noFieldComments.map((c, i) => <div key={i} className="field-comment">{c.field ? `${c.field}: ` : ""}{c.body}</div>)}
-            </section>
-          )}
-
-          <section>
-            <h2>Preview</h2>
-            <a href={`/api/solicitations/${id}/preview?doc=rfb`} target="_blank" rel="noreferrer">Preview RFB</a>
-            {" · "}
-            <a href={`/api/solicitations/${id}/preview?doc=bid-form`} target="_blank" rel="noreferrer">Preview bid form</a>
-            <p style={{ margin: "4px 0 0" }}>Previews show the last saved draft.</p>
-          </section>
-
-          {editable && (
-            <section>
-              <h2>Submit for office review</h2>
-              <button type="button" disabled={!canSubmit} onClick={() => void submit()}>
-                {submitting ? "Submitting..." : "Submit for review"}
-              </button>
-              {!canSubmit && !submitting && <p style={{ margin: "4px 0 0" }}>Fix all problems and acknowledge all warnings first.</p>}
-              {submitIssues && (
-                <>
-                  <p className="error" role="alert">The server did not accept the submission.</p>
-                  <IssueList issues={submitIssues.errors} kind="error" />
-                  <IssueList issues={submitIssues.unacknowledged} kind="warning" acked={acked} onAck={ack} />
-                </>
-              )}
-            </section>
-          )}
-        </aside>
+          </Card>
+        )}
+      </aside>
     </div>
   );
 }

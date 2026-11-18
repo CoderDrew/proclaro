@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button, Card, Choice, Money, MoneyInput, Notice, Table, Td, Th } from "@/components/ui";
 import { BidFileUploader, type UploadedBidFile } from "@/components/BidFileUploader";
 import { formatMoney, parseMoney, type Cents } from "@/domain/money";
 import { UPLOAD_SLOT_LABELS, type BidBondChoice, type BidDraft, type UploadSlot } from "@/domain/bid/types";
@@ -29,8 +30,8 @@ export function StartBidButton({ solicitationId }: { solicitationId: string }) {
   }
   return (
     <div>
-      <button type="button" disabled={busy} onClick={() => void start()}>Start a bid</button>
-      {error && <p role="alert" className="error">{error}</p>}
+      <Button type="button" variant="primary" disabled={busy} onClick={() => void start()}>Start a bid</Button>
+      {error && <Notice tone="error" role="alert">{error}</Notice>}
     </div>
   );
 }
@@ -38,12 +39,10 @@ export function StartBidButton({ solicitationId }: { solicitationId: string }) {
 /** Opens the solicitation's unfilled bid form (for filling in by hand) in a new tab. */
 export function PrintBlankFormButton({ solicitationId }: { solicitationId: string }) {
   return (
-    <p>
-      <button type="button" data-testid="print-blank-form"
-        onClick={() => window.open(`/api/solicitations/${solicitationId}/blank-form`, "_blank", "noopener")}>
-        Print Blank Bid Form
-      </button>
-    </p>
+    <Button type="button" variant="secondary" data-testid="print-blank-form"
+      onClick={() => window.open(`/api/solicitations/${solicitationId}/blank-form`, "_blank", "noopener")}>
+      Print Blank Bid Form
+    </Button>
   );
 }
 
@@ -162,127 +161,133 @@ export function BidDraftForm({
       <p data-testid="draft-version">This draft will be submitted as version {version}.</p>
       <p>Bids are due {due}.{readOnly && " Bidding has closed, so this draft can no longer be changed."}</p>
 
-      <h2>Amounts</h2>
-      <table className="list">
-        <thead><tr><th>Line</th><th>Description</th><th>Amount</th></tr></thead>
-        <tbody>
-          {rules.schedule.items.map((it, i) => (
-            <tr key={`i${i}`}>
-              <td>Item {i + 1}</td>
-              <td>{it.name}{it.description ? `: ${it.description}` : ""}</td>
-              <td>
-                $<input
-                  aria-label={`Item ${i + 1} amount`} inputMode="decimal" value={items[i]} disabled={readOnly}
-                  onChange={(e) => setItems((p) => p.map((v, k) => (k === i ? e.target.value : v)))}
-                  aria-invalid={bad(items[i])}
-                />
-                {bad(items[i]) && <span className="error"> Enter a dollar amount like 12,500.00</span>}
-              </td>
+      <Card title="Amounts">
+        <Table>
+          <thead><tr><Th>Line</Th><Th>Description</Th><Th numeric>Amount</Th></tr></thead>
+          <tbody>
+            {rules.schedule.items.map((it, i) => (
+              <tr key={`i${i}`}>
+                <Td>Item {i + 1}</Td>
+                <Td>{it.name}{it.description ? `: ${it.description}` : ""}</Td>
+                <Td numeric>
+                  <MoneyInput
+                    aria-label={`Item ${i + 1} amount`} value={items[i]} disabled={readOnly}
+                    onChange={(e) => setItems((p) => p.map((v, k) => (k === i ? e.target.value : v)))}
+                    aria-invalid={bad(items[i])}
+                  />
+                  {bad(items[i]) && <span className="error"> Enter a dollar amount like 12,500.00</span>}
+                </Td>
+              </tr>
+            ))}
+            {rules.schedule.alternates.map((a, i) => (
+              <tr key={`a${i}`}>
+                <Td>Alternate {i + 1} ({a.kind === "additive" ? "add" : "deduct"})</Td>
+                <Td>{a.description}</Td>
+                <Td numeric>
+                  <MoneyInput
+                    aria-label={`Alternate ${i + 1} amount`} value={alts[i]} disabled={readOnly}
+                    onChange={(e) => setAlts((p) => p.map((v, k) => (k === i ? e.target.value : v)))}
+                    aria-invalid={bad(alts[i])}
+                  />
+                  {bad(alts[i]) && <span className="error"> Enter a dollar amount like 12,500.00</span>}
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <Th colSpan={2}>Base total{allItemsEntered ? "" : " (items entered so far)"}</Th>
+              <Td numeric data-testid="base-total"><Money cents={total} /></Td>
             </tr>
-          ))}
-          {rules.schedule.alternates.map((a, i) => (
-            <tr key={`a${i}`}>
-              <td>Alternate {i + 1} ({a.kind === "additive" ? "add" : "deduct"})</td>
-              <td>{a.description}</td>
-              <td>
-                $<input
-                  aria-label={`Alternate ${i + 1} amount`} inputMode="decimal" value={alts[i]} disabled={readOnly}
-                  onChange={(e) => setAlts((p) => p.map((v, k) => (k === i ? e.target.value : v)))}
-                  aria-invalid={bad(alts[i])}
-                />
-                {bad(alts[i]) && <span className="error"> Enter a dollar amount like 12,500.00</span>}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <th colSpan={2}>Base total{allItemsEntered ? "" : " (items entered so far)"}</th>
-            <td data-testid="base-total">{formatMoney(total)}</td>
-          </tr>
-        </tfoot>
-      </table>
-      {!readOnly && (
-        <p>
-          <button type="button" disabled={saving || !dirty} onClick={() => void savePrices()}>Save Amounts</button>
-          {dirty && <span data-testid="unsaved-notice" role="status"> Unsaved changes</span>}
-        </p>
-      )}
-
-      {bonds && (
-        <fieldset>
-          <legend>Bid bond</legend>
-          <p className="tight">This solicitation requires a bid bond.</p>
-          <label className="radio-line">
-            <input type="radio" name="bond" checked={choice === "electronic"} disabled={readOnly}
-              onChange={() => void chooseBond("electronic")} />
-            <span>Electronic surety bond (upload it below)</span>
-          </label>
-          <label className="radio-line">
-            <input type="radio" name="bond" checked={choice === "paper"} disabled={readOnly}
-              onChange={() => void chooseBond("paper")} />
-            <span>Paper original mailed</span>
-          </label>
-        </fieldset>
-      )}
-
-      <h2>Required uploads</h2>
-      <p className="tight">One file per item. Uploading again replaces the current file.</p>
-      <div className="upload-list">
-      {slots.map((slot) => (
-        <BidFileUploader
-          key={slot}
-          slot={slot}
-          title={UPLOAD_SLOT_LABELS[slot]}
-          current={files.find((f) => f.slot === slot) ?? null}
-          disabled={readOnly}
-          createUploadUrl={(name) => createBidUploadUrl(bidId, slot, name)}
-          onUploaded={uploaded}
-          onRemove={() => removed(slot)}
-        />
-      ))}
-      </div>
-
-      {message && <p role={message.kind === "error" ? "alert" : "status"} className={message.kind === "error" ? "error" : undefined}>{message.text}</p>}
-
-      <h2>Print for signature</h2>
-      <p>
-        <button type="button" data-testid="print-form" disabled={!canPrintForSignature}
-          onClick={() => window.open(`/api/bids/${bidId}/form`, "_blank", "noopener")}>
-          Print Bid Form for Signature
-        </button>
-        {dirty && <span> Unsaved changes: save your amounts first.</span>}
-        {!dirty && !canPrintForSignature && !readOnly && <span> Enter and save every amount to print the form.</span>}
-      </p>
-
-      {!readOnly && (
-        <>
-        <h2>Before you can submit</h2>
-        {issues.length === 0 ? (
-          <p data-testid="bid-ready">Nothing is missing from this draft.{dirty && " Save your amounts first."}</p>
-        ) : (
-          <ul data-testid="bid-issues">
-            {issues.map((i) => <li key={`${i.code}:${i.field}`} data-code={i.code}>{i.message}</li>)}
-          </ul>
-        )}
-        {!confirming ? (
-          <p>
-            <button type="button" data-testid="submit-bid" disabled={!canSubmit}
-              onClick={() => setConfirming(true)}>Submit bid (version {version})</button>
-          </p>
-
-        ) : (
-          <div role="alertdialog" aria-label="Confirm submit" data-testid="submit-confirm">
-            <p><strong>Submit version {version}?</strong></p>
-            <p>Once you submit, you cannot see your prices or files again.</p>
-            <p>Print the bid form for version {version} first: it is not available after you submit. The signed form for this
-              version must be received by {due}.</p>
-            <button type="button" disabled={submitting} onClick={() => void submit()}>Yes, submit version {version}</button>
-            {" "}
-            <button type="button" disabled={submitting} onClick={() => setConfirming(false)}>Cancel</button>
+          </tfoot>
+        </Table>
+        {!readOnly && (
+          <div className="ui-actions">
+            <Button type="button" variant="primary" disabled={saving || !dirty} onClick={() => void savePrices()}>Save Amounts</Button>
+            {dirty && <span data-testid="unsaved-notice" role="status" className="ui-badge ui-badge--warning"> Unsaved changes</span>}
           </div>
         )}
-        </>
+      </Card>
+
+      {bonds && (
+        <Card title="Bid bond">
+          <fieldset className="ui-fieldset">
+            <legend className="visually-hidden">Bid bond</legend>
+            <p>This solicitation requires a bid bond.</p>
+            <Choice label="Electronic surety bond (upload it below)">
+              <input type="radio" name="bond" checked={choice === "electronic"} disabled={readOnly}
+                onChange={() => void chooseBond("electronic")} />
+            </Choice>
+            <Choice label="Paper original mailed">
+              <input type="radio" name="bond" checked={choice === "paper"} disabled={readOnly}
+                onChange={() => void chooseBond("paper")} />
+            </Choice>
+          </fieldset>
+        </Card>
+      )}
+
+      <Card title="Required uploads">
+        <p>One file per item. Uploading again replaces the current file.</p>
+        <div className="ui-upload-list">
+          {slots.map((slot) => (
+            <BidFileUploader
+              key={slot}
+              slot={slot}
+              title={UPLOAD_SLOT_LABELS[slot]}
+              current={files.find((f) => f.slot === slot) ?? null}
+              disabled={readOnly}
+              createUploadUrl={(name) => createBidUploadUrl(bidId, slot, name)}
+              onUploaded={uploaded}
+              onRemove={() => removed(slot)}
+            />
+          ))}
+        </div>
+      </Card>
+
+      {message && (
+        <Notice tone={message.kind === "error" ? "error" : "success"} role={message.kind === "error" ? "alert" : "status"}>{message.text}</Notice>
+      )}
+
+      <Card title="Print for signature">
+        <div className="ui-actions">
+          <Button type="button" variant="secondary" data-testid="print-form" disabled={!canPrintForSignature}
+            onClick={() => window.open(`/api/bids/${bidId}/form`, "_blank", "noopener")}>
+            Print Bid Form for Signature
+          </Button>
+          {dirty && <span> Unsaved changes: save your amounts first.</span>}
+          {!dirty && !canPrintForSignature && !readOnly && <span> Enter and save every amount to print the form.</span>}
+        </div>
+      </Card>
+
+      {!readOnly && (
+        <Card title="Before you can submit">
+          {issues.length === 0 ? (
+            <Notice tone="success" data-testid="bid-ready">Nothing is missing from this draft.{dirty && " Save your amounts first."}</Notice>
+          ) : (
+            <Notice tone="warning">
+              <ul data-testid="bid-issues">
+                {issues.map((i) => <li key={`${i.code}:${i.field}`} data-code={i.code}>{i.message}</li>)}
+              </ul>
+            </Notice>
+          )}
+          {!confirming ? (
+            <div className="ui-actions">
+              <Button type="button" variant="primary" data-testid="submit-bid" disabled={!canSubmit}
+                onClick={() => setConfirming(true)}>Submit bid (version {version})</Button>
+            </div>
+          ) : (
+            <Notice tone="warning" role="alertdialog" aria-label="Confirm submit" data-testid="submit-confirm">
+              <p><strong>Submit version {version}?</strong></p>
+              <p>Once you submit, you cannot see your prices or files again.</p>
+              <p>Print the bid form for version {version} first: it is not available after you submit. The signed form for this
+                version must be received by {due}.</p>
+              <div className="ui-actions">
+                <Button type="button" variant="primary" disabled={submitting} onClick={() => void submit()}>Yes, submit version {version}</Button>
+                <Button type="button" variant="secondary" disabled={submitting} onClick={() => setConfirming(false)}>Cancel</Button>
+              </div>
+            </Notice>
+          )}
+        </Card>
       )}
     </div>
   );

@@ -174,6 +174,35 @@ Bidder registration, sealed bid submission and opening. Design: `docs/superpower
 - **The bidder home's open list uses the server clock.** The solicitation page asks the database; the list does not.
 - **Email confirmation is off locally.** It must be on before hosting.
 
+## 2026-11-18 — Look and feel, as built
+
+A visual pass over every page. Behaviour, server logic, generated PDFs and test strings did not change. Specs and plans: `docs/superpowers/`.
+
+- **Direction.** Soft gray page, white cards, one blue accent, tinted pill badges, Inter (via `next/font/google`, system-ui fallback). Plain CSS, no new dependencies. No dark mode (a spec non-goal).
+- **Tokens.** `src/styles/tokens.css`: colours (page, surface, border, text, accent, focus, disabled, and a background/text pair per tone: success, danger, warning, neutral, info), spacing, radii, shadow, type scale and weights, content width. `src/styles/contrast.test.ts` checks every text/background pairing for WCAG AA, the focus ring (3:1 against surface and page) and the disabled pair.
+- **Components.** `src/components/ui/`: `AppShell` and `AppNav`, `PageHeader` and `Page`, `Card`, `Button` (variants primary, secondary, danger, link; `type` is required), `Field`, `FieldGrid`, `Choice` and `MoneyInput`, `Table` (`Th`, `Td`, `EmptyState`; wide tables scroll horizontally), `StatusBadge` (domain status to tone and label in `status.ts`), `Notice`, `Money` and `DateTime`. Component rules are in `src/styles/components.css`; element defaults and the global focus ring are in `src/app/globals.css`.
+- **Nav.** Computed on the server by `navFor` (`nav.ts`) and mirrored to the page guards, so a role is never shown a link it cannot use. A link gets `aria-current="page"` on an exact path match and `aria-current="true"` when the current page is nested under it (a section match); hash links are never marked. The Mine/All segment on `/office` uses `aria-current="true"`.
+
+  | Session | Links |
+  |---|---|
+  | Signed out (and a signed-in user with no profile) | Solicitations, Sign in |
+  | Bidder | My bids (`/bidder#my-bids`), Open solicitations |
+  | Agency | My solicitations |
+  | Office | Review queue, Published (`/office#published`) |
+  | Admin (added to the role's links) | Users, Organizations, Clauses, Holidays, Settings |
+
+- **Two copy decisions.** (1) Solicitation states are shown as badge labels ("In review", "In check") rather than the raw state value. (2) Receipt-status badges show the status text without the parentheses the old markup added, for example "current" or "withdrawn Nov 18, 2026, 11:00 AM". The badge's tone comes from the receipt's state (withdrawn, current or superseded), not from the label text.
+- **Other record copy changes.** Two badges lost their parentheses: "after the bid due time" and "missing since submission". The "·" between Mine and All on the office queue and the " - " separators on the admin home were dropped.
+- **Allowed inline styles.** Only the two preview iframes in `ReviewPanel.tsx` (fixed width and height). `src/documents/templates/RfbSections.tsx` has one `style` in the PDF template, which is out of scope.
+- **State is never hidden by styling.** Disabled and read-only controls get the disabled fill and text and `not-allowed`; the sealed notice stays a warning `Notice`; "Non-responsive" stays a danger badge followed by the database reason; file flags keep `role="alert"`.
+
+### Known gaps
+
+- **Set-password is not screenshotted.** It is reached only from an invite email link.
+- **Unregistered users see the signed-out nav.** A signed-in account with no profile has a null session context, so it gets Solicitations and Sign in and no sign-out link.
+- **No admin overview link** in the nav; admins reach their pages through the five admin links.
+- **No dark mode.** The spec excluded it.
+
 ## Open questions
 
 See `docs/discovery.md` §3.

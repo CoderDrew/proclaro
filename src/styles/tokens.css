@@ -1,0 +1,64 @@
+/* Design tokens. Every colour pairing used for text is checked by contrast.test.ts (WCAG AA). */
+:root {
+  color-scheme: light;
+
+  /* Colours */
+  --color-page: #f5f7fa;
+  --color-surface: #ffffff;
+  --color-border: #e3e8ef;
+  --color-control-border: #7c8799;
+  --color-text: #1b2330;
+  --color-text-muted: #5b6576;
+  --color-accent: #2456d6;
+  --color-accent-hover: #1c45b0;
+  --color-on-accent: #ffffff;
+  --color-focus: #2456d6;
+  --color-disabled-bg: #eef1f5;
+  --color-disabled-text: #5b6576;
+  --color-danger-solid: #b42323;
+
+  /* Tints: each a background and a readable text colour */
+  --color-success-bg: #e7f6ec;
+  --color-success-text: #16653a;
+  --color-danger-bg: #fdecec;
+  --color-danger-text: #b42323;
+  --color-warning-bg: #fdf3dc;
+  --color-warning-text: #8a5300;
+  --color-neutral-bg: #eef1f5;
+  --color-neutral-text: #424b5a;
+  --color-info-bg: #e8f0fe;
+  --color-info-text: #1d4ed8;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Radius */
+  --radius-card: 12px;
+  --radius-control: 8px;
+  --radius-pill: 999px;
+
+  /* Shadow */
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.1);
+
+  /* Type */
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* Layout */
+  --content-max: 1200px;
+}

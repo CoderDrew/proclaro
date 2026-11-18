@@ -1,27 +1,25 @@
 "use client";
 
 import { useActionState } from "react";
+import { Button, Field, Notice } from "@/components/ui";
 import { signUp } from "./actions";
 
 export function SignUpForm({ minLength }: { minLength: number }) {
   const [state, action, pending] = useActionState(signUp, undefined);
   return (
-    <form action={action} style={{ display: "grid", gap: 8 }}>
-      <label>
-        Email
+    <form action={action} className="ui-form">
+      <Field label="Email">
         <input name="email" type="email" autoComplete="username" required />
-      </label>
-      <label>
-        Password
+      </Field>
+      <Field label="Password">
         <input name="password" type="password" autoComplete="new-password" minLength={minLength} required />
-      </label>
-      <label>
-        Confirm password
+      </Field>
+      <Field label="Confirm password">
         <input name="confirm" type="password" autoComplete="new-password" minLength={minLength} required />
-      </label>
-      {state?.error && <p role="alert" className="error">{state.error}</p>}
-      {state?.notice && <p role="status">{state.notice}</p>}
-      <button type="submit" disabled={pending}>{pending ? "Creating account..." : "Create account"}</button>
+      </Field>
+      {state?.error && <Notice tone="error" role="alert">{state.error}</Notice>}
+      {state?.notice && <Notice tone="success" role="status">{state.notice}</Notice>}
+      <Button type="submit" variant="primary" loading={pending}>{pending ? "Creating account..." : "Create account"}</Button>
     </form>
   );
 }

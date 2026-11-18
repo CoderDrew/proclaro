@@ -1,4 +1,5 @@
 import { createServerClient } from "@/lib/supabase/server";
+import { Card, EmptyState, Field, FieldGrid, Page, PageHeader, Table, Td, Th } from "@/components/ui";
 import { ActionForm } from "../ActionForm";
 import { requireAdminPage } from "../guard";
 import { addHoliday, removeHoliday } from "./actions";
@@ -12,40 +13,47 @@ export default async function HolidaysPage() {
   if (error) throw new Error(error.message);
 
   return (
-    <main>
-      <p><a href="/admin">Administration</a></p>
-      <h1>Holidays</h1>
-      <p>Holidays are local dates (YYYY-MM-DD). The date rules skip them when counting days.</p>
+    <Page width="full">
+      <PageHeader crumbs={<a href="/admin">Administration</a>} title="Holidays" />
+      <p className="muted">Holidays are local dates (YYYY-MM-DD). The date rules skip them when counting days.</p>
 
-      <h2>Add</h2>
-      <ActionForm action={addHoliday} submitLabel="Add" className="sol-form">
-        <div className="row">
-          <label>Date <input name="day" type="date" required /></label>
-          <label>Name <input name="name" required /></label>
-        </div>
-      </ActionForm>
+      <Card title="Add">
+        <ActionForm action={addHoliday} submitLabel="Add" className="ui-form">
+          <FieldGrid>
+            <Field label="Date"><input name="day" type="date" required /></Field>
+            <Field label="Name"><input name="name" required /></Field>
+          </FieldGrid>
+        </ActionForm>
+      </Card>
 
-      <h2>Existing</h2>
-      {data!.length === 0 ? (
-        <p>No holidays are set.</p>
-      ) : (
-        <table className="list">
-          <thead><tr><th>Date</th><th>Name</th><th /></tr></thead>
-          <tbody>
-            {data!.map((h) => (
-              <tr key={h.day}>
-                <td>{h.day}</td>
-                <td>{h.name}</td>
-                <td>
-                  <ActionForm action={removeHoliday} submitLabel="Remove">
-                    <input type="hidden" name="day" value={h.day} />
-                  </ActionForm>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </main>
+      <Card title="Existing">
+        {data!.length === 0 ? (
+          <EmptyState>No holidays are set.</EmptyState>
+        ) : (
+          <Table>
+            <thead><tr><Th>Date</Th><Th>Name</Th><Th /></tr></thead>
+            <tbody>
+              {data!.map((h) => (
+                <tr key={h.day}>
+                  <Td>{h.day}</Td>
+                  <Td>{h.name}</Td>
+                  <Td>
+                    <ActionForm
+                      action={removeHoliday}
+                      submitLabel="Remove"
+                      submitVariant="danger"
+                      submitAriaLabel={`Remove holiday ${h.day}`}
+                      className="ui-inline-form"
+                    >
+                      <input type="hidden" name="day" value={h.day} />
+                    </ActionForm>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </Card>
+    </Page>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Button, Notice, type ButtonVariant } from "@/components/ui";
 import type { AdminResult } from "./common";
 
 /**
@@ -12,11 +13,15 @@ export function ActionForm({
   children,
   className,
   submitLabel = "Save",
+  submitVariant = "primary",
+  submitAriaLabel,
 }: {
   action: (formData: FormData) => Promise<AdminResult>;
   children: React.ReactNode;
   className?: string;
   submitLabel?: string;
+  submitVariant?: ButtonVariant;
+  submitAriaLabel?: string;
 }) {
   const [state, run, pending] = useActionState(
     async (_prev: AdminResult | null, fd: FormData) => action(fd),
@@ -25,11 +30,17 @@ export function ActionForm({
   return (
     <form action={run} className={className}>
       {children}
-      <button type="submit" disabled={pending}>{pending ? "Working..." : submitLabel}</button>
+      <Button type="submit" variant={submitVariant} loading={pending} aria-label={pending ? undefined : submitAriaLabel}>
+        {pending ? "Working..." : submitLabel}
+      </Button>
       {state && (
-        <span role={state.ok ? "status" : "alert"} style={{ marginLeft: 8, color: state.ok ? "green" : "crimson" }}>
+        <Notice
+          tone={state.ok ? "success" : "error"}
+          role={state.ok ? "status" : "alert"}
+          className="ui-inline-status"
+        >
           {state.ok ? state.message ?? "Saved." : state.message}
-        </span>
+        </Notice>
       )}
     </form>
   );

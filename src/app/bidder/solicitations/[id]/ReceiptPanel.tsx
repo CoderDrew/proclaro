@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button, Card, Notice, StatusBadge, receiptKey } from "@/components/ui";
 import { replaceBid, withdrawBid } from "./actions";
 import { afterSubmitNotice, replaceConfirmationFor, withdrawConfirmation } from "./logic";
 
@@ -35,37 +36,38 @@ export function ReceiptPanel({
 
   if (!latest) return null;
   return (
-    <section data-testid="receipts">
-      <h2>Receipts</h2>
-      <ul>
+    <Card title="Receipts" data-testid="receipts">
+      <ul className="ui-receipts">
         {receipts.map((r) => (
-          <li key={r.version} data-testid={`receipt-${r.version}`}>{r.line} <strong>({r.status})</strong></li>
+          <li key={r.version} data-testid={`receipt-${r.version}`}>
+            {r.line} <StatusBadge status={{ kind: "bidVersion", status: receiptKey(r) }} label={r.status} wrap />
+          </li>
         ))}
       </ul>
-      {current && <p data-testid="mail-notice">{afterSubmitNotice(current.version, due)}</p>}
-      {!current && <p>Your latest version is withdrawn, so you have no bid on file.</p>}
+      {current && <Notice tone="info" data-testid="mail-notice">{afterSubmitNotice(current.version, due)}</Notice>}
+      {!current && <Notice tone="warning">Your latest version is withdrawn, so you have no bid on file.</Notice>}
       {open && !confirm && (
-        <p>
-          {current && <button type="button" data-testid="withdraw-bid" onClick={() => setConfirm("withdraw")}>Withdraw version {current.version}</button>}
-          {" "}
+        <div className="ui-actions">
+          {current && <Button type="button" variant="danger" data-testid="withdraw-bid" onClick={() => setConfirm("withdraw")}>Withdraw version {current.version}</Button>}
           {!hasDraft && (
-            <button type="button" data-testid="replace-bid" onClick={() => setConfirm("replace")}>
+            <Button type="button" variant="secondary" data-testid="replace-bid" onClick={() => setConfirm("replace")}>
               {current ? "Replace with a new version" : "Start a new version"}
-            </button>
+            </Button>
           )}
-        </p>
-      )}
-      {open && confirm && (
-        <div role="alertdialog" aria-label={confirm === "withdraw" ? "Confirm withdraw" : "Confirm replace"} data-testid="receipt-confirm">
-          <p>{confirm === "withdraw" ? withdrawConfirmation(latest.version, due) : replaceConfirmationFor(receipts)}</p>
-          <button type="button" disabled={busy} onClick={() => void run(confirm)}>
-            {confirm === "withdraw" ? "Yes, withdraw" : "Yes, start a new draft"}
-          </button>
-          {" "}
-          <button type="button" disabled={busy} onClick={() => setConfirm(null)}>Cancel</button>
         </div>
       )}
-      {error && <p role="alert" className="error">{error}</p>}
-    </section>
+      {open && confirm && (
+        <Notice tone="warning" role="alertdialog" aria-label={confirm === "withdraw" ? "Confirm withdraw" : "Confirm replace"} data-testid="receipt-confirm">
+          <p>{confirm === "withdraw" ? withdrawConfirmation(latest.version, due) : replaceConfirmationFor(receipts)}</p>
+          <div className="ui-actions">
+            <Button type="button" variant={confirm === "withdraw" ? "danger" : "primary"} disabled={busy} onClick={() => void run(confirm)}>
+              {confirm === "withdraw" ? "Yes, withdraw" : "Yes, start a new draft"}
+            </Button>
+            <Button type="button" variant="secondary" disabled={busy} onClick={() => setConfirm(null)}>Cancel</Button>
+          </div>
+        </Notice>
+      )}
+      {error && <Notice tone="error" role="alert">{error}</Notice>}
+    </Card>
   );
 }

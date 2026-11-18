@@ -14,6 +14,7 @@ import {
   returnToAgency, sendToCheck, startReview,
 } from "./actions";
 import type { ActionResult } from "./logic";
+import { Button, Card, EmptyState, Field, Notice, StatusBadge } from "@/components/ui";
 
 export interface AuditRow { id: number; actor: string; action: string; when: string; reason: string | null; changes: string[] }
 export interface StaffMember { userId: string; name: string }
@@ -163,36 +164,34 @@ export function ReviewPanel(props: {
     <div className="sol-layout">
       <div>
         {isReviewer && (
-          <p style={{ margin: "0 0 8px" }}>
+          <p className="ui-office-note">
             {editing ? (
               <>
                 You are editing. Every change needs a reason, which is recorded in the history.
               </>
             ) : (
-              <button type="button" onClick={() => setEditing(true)} disabled={busy}>Edit</button>
+              <Button type="button" variant="secondary" onClick={() => setEditing(true)} disabled={busy}>Edit</Button>
             )}
           </p>
         )}
         {editing && (
-          <div className="sol-side" style={{ position: "static", margin: "0 0 12px" }}>
-            <section>
-              <label>Reason for the change
-                <input value={reason} onChange={(e) => setReason(e.target.value)} />
-              </label>
-              <p style={{ margin: "6px 0 0" }}>
-                <button
-                  type="button" disabled={busy || !dirty}
-                  onClick={() => void act(() => editAsReviewer(id, latest.current, reason), () => {
-                    setEditing(false);
-                    setReason("");
-                  })}
-                >
-                  Save changes
-                </button>{" "}
-                <button type="button" onClick={cancelEdit} disabled={busy}>Cancel</button>
-              </p>
-            </section>
-          </div>
+          <Card as="section" className="ui-office-note">
+            <Field label="Reason for the change">
+              <input value={reason} onChange={(e) => setReason(e.target.value)} />
+            </Field>
+            <p className="ui-inline-actions">
+              <Button
+                type="button" variant="primary" disabled={busy || !dirty}
+                onClick={() => void act(() => editAsReviewer(id, latest.current, reason), () => {
+                  setEditing(false);
+                  setReason("");
+                })}
+              >
+                Save changes
+              </Button>
+              <Button type="button" variant="secondary" onClick={cancelEdit} disabled={busy}>Cancel</Button>
+            </p>
+          </Card>
         )}
         <SolicitationFields
           data={data} getLatest={() => latest.current} onChange={change} editable={editing}
@@ -206,122 +205,124 @@ export function ReviewPanel(props: {
       </div>
 
       <aside className="sol-side">
-        <section>
-          <h2>Status</h2>
-          <span className="status-pill">{STATE_LABELS[state] ?? state}</span>
+        <Card as="section" title="Status">
+          <StatusBadge status={{ kind: "solicitation", state }} label={STATE_LABELS[state] ?? state} />
           {props.number && <> <strong>{props.number}</strong></>}
-          <p style={{ margin: "6px 0 0" }}>{props.agencyName}</p>
-          {props.reviewerName && <p style={{ margin: "2px 0 0" }}>Reviewer: {props.reviewerName}</p>}
+          <p className="ui-office-note">{props.agencyName}</p>
+          {props.reviewerName && <p className="ui-office-note">Reviewer: {props.reviewerName}</p>}
           {state === "approved" && props.fallbackApproved && (
-            <p style={{ margin: "4px 0 0" }}>Single-reviewer approval (no second reviewer available).</p>
+            <p className="ui-office-note">Single-reviewer approval (no second reviewer available).</p>
           )}
-          {message && <p role="alert" className="error">{message}</p>}
+          {message && <Notice tone="error" role="alert">{message}</Notice>}
           {gate && (
             <>
               <IssueList issues={gate.errors} kind="error" />
               <IssueList issues={gate.unacknowledged} kind="warning" acked={acked} onAck={isReviewer ? ack : undefined} />
             </>
           )}
-        </section>
+        </Card>
 
-        <section>
-          <h2>Actions</h2>
-          {!props.canWork && <p style={{ margin: 0 }}>You can view this solicitation but not act on it.</p>}
+        <Card as="section" title="Actions">
+          {!props.canWork && <p className="ui-office-note">You can view this solicitation but not act on it.</p>}
 
           {props.canWork && state === "submitted" && (
-            <button type="button" disabled={busy} onClick={() => void act(() => startReview(id))}>Start review</button>
+            <Button type="button" variant="primary" disabled={busy} onClick={() => void act(() => startReview(id))}>Start review</Button>
           )}
 
           {props.canWork && state === "in_review" && !isReviewer && (
-            <p style={{ margin: 0 }}>This solicitation is being reviewed by {props.reviewerName ?? "another staff member"}.</p>
+            <p className="ui-office-note">This solicitation is being reviewed by {props.reviewerName ?? "another staff member"}.</p>
           )}
 
           {isReviewer && (
             <>
-              <p style={{ margin: "0 0 6px" }}>
-                <button type="button" disabled={!canAdvance} onClick={() => {
+              <p className="ui-inline-actions">
+                <Button type="button" variant="danger" disabled={!canAdvance} onClick={() => {
                   const rows = comments.map((c) => ({ field: c.field === "" ? null : c.field, body: c.body }));
                   void act(() => returnToAgency(id, rows));
-                }}>Return</button>{" "}
-                <button type="button" disabled={!canAdvance || errors.length > 0 || unackedNow.length > 0}
-                  onClick={() => void act(() => sendToCheck(id))}>Send to check</button>{" "}
-                <button type="button" disabled={!canAdvance || errors.length > 0 || unackedNow.length > 0}
-                  onClick={() => setConfirmAlone(true)}>Approve alone</button>
+                }}>Return</Button>
+                <Button type="button" variant="primary" disabled={!canAdvance || errors.length > 0 || unackedNow.length > 0}
+                  onClick={() => void act(() => sendToCheck(id))}>Send to check</Button>
+                <Button type="button" variant="secondary" disabled={!canAdvance || errors.length > 0 || unackedNow.length > 0}
+                  onClick={() => setConfirmAlone(true)}>Approve alone</Button>
               </p>
-              {dirty && <p style={{ margin: 0 }}>Save or cancel your edits first.</p>}
+              {dirty && <p className="ui-office-note">Save or cancel your edits first.</p>}
               {!dirty && (errors.length > 0 || unackedNow.length > 0) && (
-                <p style={{ margin: 0 }}>Fix all problems and acknowledge all warnings before sending to check or approving.</p>
+                <p className="ui-office-note">Fix all problems and acknowledge all warnings before sending to check or approving.</p>
               )}
               {confirmAlone && (
-                <div role="alertdialog" className="field-comment" style={{ marginTop: 6 }}>
-                  <p style={{ margin: "0 0 4px" }}>
+                <Notice tone="warning" role="alertdialog">
+                  <p className="ui-office-note">
                     No second reviewer available. This approval will be recorded as a single-reviewer approval.
                   </p>
-                  <button type="button" disabled={busy}
-                    onClick={() => void act(() => approveAlone(id), () => setConfirmAlone(false))}>Confirm approve alone</button>{" "}
-                  <button type="button" onClick={() => setConfirmAlone(false)}>Cancel</button>
-                </div>
+                  <p className="ui-inline-actions">
+                    <Button type="button" variant="secondary" disabled={busy}
+                      onClick={() => void act(() => approveAlone(id), () => setConfirmAlone(false))}>Confirm approve alone</Button>
+                    <Button type="button" variant="secondary" onClick={() => setConfirmAlone(false)}>Cancel</Button>
+                  </p>
+                </Notice>
               )}
             </>
           )}
 
           {props.canWork && state === "in_check" && props.reviewerId === props.viewerId && (
-            <p style={{ margin: 0 }}>Waiting for a different staff member to check this solicitation.</p>
+            <p className="ui-office-note">Waiting for a different staff member to check this solicitation.</p>
           )}
 
           {props.canWork && state === "in_check" && props.reviewerId !== props.viewerId && (
             <>
-              <p style={{ margin: "0 0 6px" }}>
-                <button type="button" disabled={busy} onClick={() => void act(() => approveCheck(id))}>Approve</button>
+              <p className="ui-office-note">
+                <Button type="button" variant="primary" disabled={busy} onClick={() => void act(() => approveCheck(id))}>Approve</Button>
               </p>
-              <label>Disagree with this field (optional)
+              <Field label="Disagree with this field (optional)">
                 <select value={checkField} onChange={(e) => setCheckField(e.target.value)}>
                   <option value="">General (no field)</option>
                   {FIELD_OPTIONS.map((f) => <option key={f.path} value={f.path}>{f.label}</option>)}
                 </select>
-              </label>
-              <label>Comment
-                <textarea value={checkComment} onChange={(e) => setCheckComment(e.target.value)} style={{ width: "100%" }} />
-              </label>
-              <button type="button" disabled={busy}
-                onClick={() => void act(() => disagree(id, checkComment, checkField === "" ? null : checkField))}>
-                Disagree
-              </button>
+              </Field>
+              <Field label="Comment">
+                <textarea value={checkComment} onChange={(e) => setCheckComment(e.target.value)} />
+              </Field>
+              <p>
+                <Button type="button" variant="danger" disabled={busy}
+                  onClick={() => void act(() => disagree(id, checkComment, checkField === "" ? null : checkField))}>
+                  Disagree
+                </Button>
+              </p>
             </>
           )}
 
           {state === "approved" && !canPublish && (
-            <p style={{ margin: 0 }}>Approved. The reviewer or checker publishes it.</p>
+            <p className="ui-office-note">Approved. The reviewer or checker publishes it.</p>
           )}
           {canPublish && (
             <>
-              <p style={{ margin: "0 0 6px" }}>
-                <button type="button" disabled={busy} onClick={() => void act(() => publish(id))}>
+              <p className="ui-office-note">
+                <Button type="button" variant="primary" disabled={busy} onClick={() => void act(() => publish(id))}>
                   {busy ? "Publishing..." : "Publish"}
-                </button>
+                </Button>
               </p>
-              <p style={{ margin: 0 }}>
+              <p className="ui-office-note">
                 Publishing renders the final documents and freezes this solicitation. It cannot be edited afterwards.
               </p>
-              <div className={releasePassed ? "field-comment" : undefined} style={{ marginTop: 8 }}>
-                {releasePassed && (
-                  <p style={{ margin: "0 0 4px" }}>
-                    The release date has passed. Reopen the review so the reviewer can correct the dates; it then
-                    needs a new check (or approval) before publishing.
-                  </p>
-                )}
-                <label>Reason for reopening
-                  <input value={reopenReason} onChange={(e) => setReopenReason(e.target.value)} />
-                </label>{" "}
-                <button type="button" disabled={busy || reopenReason.trim() === ""}
+              {releasePassed && (
+                <Notice tone="warning">
+                  The release date has passed. Reopen the review so the reviewer can correct the dates; it then
+                  needs a new check (or approval) before publishing.
+                </Notice>
+              )}
+              <Field label="Reason for reopening">
+                <input value={reopenReason} onChange={(e) => setReopenReason(e.target.value)} />
+              </Field>
+              <p>
+                <Button type="button" variant="secondary" disabled={busy || reopenReason.trim() === ""}
                   onClick={() => void act(() => reopenReview(id, reopenReason), () => setReopenReason(""))}>
                   Reopen to correct dates
-                </button>
-              </div>
+                </Button>
+              </p>
             </>
           )}
           {state === "published" && props.number && (
-            <p style={{ margin: 0 }}>
+            <p className="ui-office-note">
               Published as <strong>{props.number}</strong>.{" "}
               <a href={`/solicitations/${props.number}`}>Public page</a>
               {props.initial.releaseDate && ` (visible to the public from ${props.initial.releaseDate})`}
@@ -329,28 +330,27 @@ export function ReviewPanel(props: {
           )}
 
           {props.canWork && state === "in_review" && (
-            <p style={{ margin: "8px 0 0" }}>
-              <label>Reassign review to
+            <div className="ui-stack-tight">
+              <Field label="Reassign review to">
                 <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
                   <option value="">Select...</option>
                   {props.staff.filter((s) => s.userId !== props.reviewerId).map((s) => (
                     <option key={s.userId} value={s.userId}>{s.name}</option>
                   ))}
                 </select>
-              </label>{" "}
-              <button type="button" disabled={busy || assignee === ""} onClick={() => void act(() => reassign(id, assignee))}>
+              </Field>
+              <Button type="button" variant="secondary" disabled={busy || assignee === ""} onClick={() => void act(() => reassign(id, assignee))}>
                 Reassign
-              </button>
-            </p>
+              </Button>
+            </div>
           )}
-        </section>
+        </Card>
 
         {isReviewer && (
-          <section>
-            <h2>Comments to the agency</h2>
-            <p style={{ margin: "0 0 6px" }}>Used when you return the solicitation. Choose a field, or leave it general.</p>
+          <Card as="section" title="Comments to the agency">
+            <p className="ui-office-note">Used when you return the solicitation. Choose a field, or leave it general.</p>
             {comments.map((c, i) => (
-              <div key={i} style={{ marginBottom: 6 }}>
+              <div key={i} className="ui-comment-row">
                 <select
                   aria-label={`Comment ${i + 1} field`} value={c.field}
                   onChange={(e) => setComments(comments.map((x, j) => (j === i ? { ...x, field: e.target.value } : x)))}
@@ -359,60 +359,56 @@ export function ReviewPanel(props: {
                   {FIELD_OPTIONS.map((f) => <option key={f.path} value={f.path}>{f.label}</option>)}
                 </select>
                 <textarea
-                  aria-label={`Comment ${i + 1}`} value={c.body} style={{ width: "100%" }}
+                  aria-label={`Comment ${i + 1}`} value={c.body}
                   onChange={(e) => setComments(comments.map((x, j) => (j === i ? { ...x, body: e.target.value } : x)))}
                 />
                 {comments.length > 1 && (
-                  <button type="button" onClick={() => setComments(comments.filter((_, j) => j !== i))}>Remove</button>
+                  <Button type="button" variant="secondary" aria-label={`Remove comment ${i + 1}`}
+                    onClick={() => setComments(comments.filter((_, j) => j !== i))}>Remove</Button>
                 )}
               </div>
             ))}
-            <button type="button" onClick={() => setComments([...comments, { field: "", body: "" }])}>Add another comment</button>
-          </section>
+            <Button type="button" variant="secondary" onClick={() => setComments([...comments, { field: "", body: "" }])}>Add another comment</Button>
+          </Card>
         )}
 
-        <section>
-          <h2>Requirements</h2>
+        <Card as="section" title="Requirements">
           <RequirementsList req={req} />
-        </section>
+        </Card>
 
-        <section>
-          <h2>Problems ({errors.length}) and warnings ({warnings.length})</h2>
+        <Card as="section" title={`Problems (${errors.length}) and warnings (${warnings.length})`}>
           <IssueList issues={errors} kind="error" />
           <IssueList issues={warnings} kind="warning" acked={acked} onAck={isReviewer ? ack : undefined} disabled={busy} />
-          {errors.length + warnings.length === 0 && <p style={{ margin: 0 }}>None.</p>}
-        </section>
+          {errors.length + warnings.length === 0 && <p className="ui-office-note">None.</p>}
+        </Card>
 
         {sideComments.length > 0 && (
-          <section>
-            <h2>Checker comments</h2>
-            {sideComments.map((c, i) => <div key={i} className="field-comment">{c.field ? `${c.field}: ` : ""}{c.body}</div>)}
-          </section>
+          <Card as="section" title="Checker comments">
+            {sideComments.map((c, i) => <Notice key={i} tone="warning">{c.field ? `${c.field}: ` : ""}{c.body}</Notice>)}
+          </Card>
         )}
 
-        <section>
-          <h2>Preview</h2>
+        <Card as="section" title="Preview">
           <a href={`/api/solicitations/${id}/preview?doc=rfb`} target="_blank" rel="noreferrer">Open RFB</a>
           {" · "}
           <a href={`/api/solicitations/${id}/preview?doc=bid-form`} target="_blank" rel="noreferrer">Open bid form</a>
-          <p style={{ margin: "4px 0 0" }}>
-            <button type="button" onClick={() => setShowPreviews((v) => !v)}>
+          <p className="ui-office-note">
+            <Button type="button" variant="secondary" onClick={() => setShowPreviews((v) => !v)}>
               {showPreviews ? "Hide embedded previews" : "Show embedded previews"}
-            </button>
+            </Button>
           </p>
-          <p style={{ margin: "4px 0 0" }}>Previews show the last saved data.</p>
-        </section>
+          <p className="ui-office-note">Previews show the last saved data.</p>
+        </Card>
 
-        <section>
-          <h2>History</h2>
-          {props.audit.length === 0 ? <p style={{ margin: 0 }}>No history yet.</p> : (
-            <ul style={{ margin: 0, paddingLeft: 16 }}>
+        <Card as="section" title="History">
+          {props.audit.length === 0 ? <EmptyState>No history yet.</EmptyState> : (
+            <ul className="ui-timeline">
               {props.audit.map((a) => (
                 <li key={a.id}>
                   <strong>{a.action}</strong> by {a.actor}, {a.when}
                   {a.reason && <div>{a.reason}</div>}
                   {a.changes.length > 0 && (
-                    <ul style={{ margin: "2px 0 0", paddingLeft: 14 }}>
+                    <ul>
                       {a.changes.map((ch, i) => <li key={i}>{ch}</li>)}
                     </ul>
                   )}
@@ -420,11 +416,11 @@ export function ReviewPanel(props: {
               ))}
             </ul>
           )}
-        </section>
+        </Card>
       </aside>
 
       {showPreviews && (
-        <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div className="ui-preview-grid">
           <iframe title="RFB preview" src={`/api/solicitations/${id}/preview?doc=rfb`} style={{ width: "100%", height: 700 }} />
           <iframe title="Bid form preview" src={`/api/solicitations/${id}/preview?doc=bid-form`} style={{ width: "100%", height: 700 }} />
         </div>

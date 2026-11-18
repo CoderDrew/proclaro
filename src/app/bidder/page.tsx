@@ -3,6 +3,7 @@ import { todayIn } from "@/domain/time";
 import { createServerClient } from "@/lib/supabase/server";
 import { formatInstant, onlyPublic } from "@/app/solicitations/status";
 import { signOut } from "@/app/login/actions";
+import { Button, Card, EmptyState, Page, PageHeader, StatusBadge, Table, Td, Th, receiptKey } from "@/components/ui";
 import { requireBidderPage } from "./guard";
 import { describeReceipt, toReceipts } from "./solicitations/[id]/logic";
 
@@ -36,55 +37,62 @@ export default async function BidderHome() {
     const receipts = toReceipts(rec.data ?? []);
     const latest = receipts.length ? receipts[receipts.length - 1] : null;
     return { bid: b, number: sol.data?.number ?? "", title: (sol.data?.data as { longTitle?: string } | null)?.longTitle || "(untitled)",
-      latest: latest ? describeReceipt(latest, tz) : null };
+      latest: latest ? { ...describeReceipt(latest, tz), key: receiptKey({ withdrawn: latest.withdrawnAt !== null, isCurrent: latest.isCurrent }) } : null };
   }));
 
   return (
-    <main>
-      <h1>Open solicitations</h1>
-      <p>Signed in as {ctx.displayName}.</p>
-      {rows.data.length === 0 ? (
-        <p>No solicitations are open for bidding right now.</p>
-      ) : (
-        <table className="list">
-          <thead>
-            <tr><th>Number</th><th>Title</th><th>Bid due</th><th>Bid</th></tr>
-          </thead>
-          <tbody>
-            {rows.data.map((r) => {
-              const title = (r.data as { longTitle?: string } | null)?.longTitle || "(untitled)";
-              return (
-                <tr key={r.id}>
-                  <td>{r.number}</td>
-                  <td>{title}</td>
-                  <td>{r.bid_due_at ? formatInstant(r.bid_due_at, tz) : "-"}</td>
-                  <td><Link href={`/bidder/solicitations/${r.id}`}>Prepare a bid</Link></td>
+    <Page width="full">
+      <PageHeader title="Open solicitations" />
+      <p className="muted">Signed in as {ctx.displayName}.</p>
+      <Card>
+        {rows.data.length === 0 ? (
+          <EmptyState>No solicitations are open for bidding right now.</EmptyState>
+        ) : (
+          <Table>
+            <thead>
+              <tr><Th>Number</Th><Th>Title</Th><Th>Bid due</Th><Th>Bid</Th></tr>
+            </thead>
+            <tbody>
+              {rows.data.map((r) => {
+                const title = (r.data as { longTitle?: string } | null)?.longTitle || "(untitled)";
+                return (
+                  <tr key={r.id}>
+                    <Td>{r.number}</Td>
+                    <Td>{title}</Td>
+                    <Td>{r.bid_due_at ? formatInstant(r.bid_due_at, tz) : "-"}</Td>
+                    <Td><Link href={`/bidder/solicitations/${r.id}`} aria-label={`Prepare a bid for ${r.number} ${title}`}>Prepare a bid</Link></Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Table>
+        )}
+      </Card>
+      <Card title="My bids" titleId="my-bids">
+        {mine.length === 0 ? (
+          <EmptyState>You have not started a bid.</EmptyState>
+        ) : (
+          <Table data-testid="my-bids">
+            <thead><tr><Th>Solicitation</Th><Th>Reference</Th><Th>Latest receipt</Th></tr></thead>
+            <tbody>
+              {mine.map((m) => (
+                <tr key={m.bid.id}>
+                  <Td><Link href={`/bidder/solicitations/${m.bid.solicitation_id}`}>{m.number}: {m.title}</Link></Td>
+                  <Td>{m.bid.reference}</Td>
+                  <Td>
+                    {m.latest ? (
+                      <>{m.latest.line} <StatusBadge status={{ kind: "bidVersion", status: m.latest.key }} label={m.latest.status} wrap /></>
+                    ) : "Draft, not yet submitted"}
+                  </Td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
-      <h2>My bids</h2>
-      {mine.length === 0 ? (
-        <p>You have not started a bid.</p>
-      ) : (
-        <table className="list" data-testid="my-bids">
-          <thead><tr><th>Solicitation</th><th>Reference</th><th>Latest receipt</th></tr></thead>
-          <tbody>
-            {mine.map((m) => (
-              <tr key={m.bid.id}>
-                <td><Link href={`/bidder/solicitations/${m.bid.solicitation_id}`}>{m.number}: {m.title}</Link></td>
-                <td>{m.bid.reference}</td>
-                <td>{m.latest ? `${m.latest.line} (${m.latest.status})` : "Draft, not yet submitted"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      <form action={signOut} style={{ marginTop: 16 }}>
-        <button type="submit">Sign out</button>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </Card>
+      <form action={signOut} className="ui-signout">
+        <Button type="submit">Sign out</Button>
       </form>
-    </main>
+    </Page>
   );
 }

@@ -1,4 +1,5 @@
 import { createServerClient } from "@/lib/supabase/server";
+import { Card, Field, FieldGrid, Page, PageHeader, Table, Td, Th } from "@/components/ui";
 import { ActionForm } from "../ActionForm";
 import { requireAdminPage } from "../guard";
 import { createOrganization, renameOrganization } from "./actions";
@@ -13,41 +14,47 @@ export default async function OrganizationsPage() {
   if (error) throw new Error(error.message);
 
   return (
-    <main>
-      <p><a href="/admin">Administration</a></p>
-      <h1>Organizations</h1>
+    <Page width="full">
+      <PageHeader crumbs={<a href="/admin">Administration</a>} title="Organizations" />
 
-      <h2>Create</h2>
-      <ActionForm action={createOrganization} submitLabel="Create" className="sol-form">
-        <div className="row">
-          <label>Name <input name="name" required /></label>
-          <label>
-            Kind{" "}
-            <select name="kind" defaultValue="agency">
-              <option value="agency">Agency</option>
-              <option value="office">Procurement office</option>
-            </select>
-          </label>
-        </div>
-      </ActionForm>
+      <Card title="Create">
+        <ActionForm action={createOrganization} submitLabel="Create" className="ui-form">
+          <FieldGrid>
+            <Field label="Name"><input name="name" required /></Field>
+            <Field label="Kind">
+              <select name="kind" defaultValue="agency">
+                <option value="agency">Agency</option>
+                <option value="office">Procurement office</option>
+              </select>
+            </Field>
+          </FieldGrid>
+        </ActionForm>
+      </Card>
 
-      <h2>Rename</h2>
-      <table className="list">
-        <thead><tr><th>Kind</th><th>Name</th></tr></thead>
-        <tbody>
-          {data!.map((o) => (
-            <tr key={o.id}>
-              <td>{o.kind}</td>
-              <td>
-                <ActionForm action={renameOrganization} submitLabel="Rename">
-                  <input type="hidden" name="id" value={o.id} />
-                  <input name="name" defaultValue={o.name} required aria-label={`Name of ${o.name}`} />{" "}
-                </ActionForm>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </main>
+      <Card title="Rename">
+        <Table>
+          <thead><tr><Th>Kind</Th><Th>Name</Th></tr></thead>
+          <tbody>
+            {data!.map((o) => (
+              <tr key={o.id}>
+                <Td>{o.kind}</Td>
+                <Td>
+                  <ActionForm
+                    action={renameOrganization}
+                    submitLabel="Rename"
+                    submitVariant="secondary"
+                    submitAriaLabel={`Rename ${o.name}`}
+                    className="ui-inline-form"
+                  >
+                    <input type="hidden" name="id" value={o.id} />
+                    <input name="name" defaultValue={o.name} required aria-label={`Name of ${o.name}`} />
+                  </ActionForm>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </Card>
+    </Page>
   );
 }
