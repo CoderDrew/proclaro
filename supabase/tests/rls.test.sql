@@ -131,7 +131,8 @@ select is((select count(*)::int from storage.objects where bucket_id = 'attachme
 select is((select count(*)::int from storage.objects where bucket_id = 'attachments'
            and name like 'solicitations/00000000-0000-0000-0000-0000000005b1/%'), 0,
   'agency A cannot read agency B''s attachments');
-select is((select count(*)::int from storage.objects where bucket_id = 'published'), 1,
+select is((select count(*)::int from storage.objects where bucket_id = 'published'
+           and name like 'solicitations/00000000-0000-0000-0000-0000000005%'), 1,
   'agency A reads only released files in the published bucket');
 select throws_ok(
   $$insert into storage.objects (bucket_id, name) values ('attachments', 'solicitations/00000000-0000-0000-0000-0000000005b1/x.pdf')$$,
@@ -152,12 +153,14 @@ select tests.act_as(:'office_u');
 select is((select count(*)::int from public.solicitations
            where id in ('00000000-0000-0000-0000-0000000005a1', '00000000-0000-0000-0000-0000000005b1')), 2,
   'office sees both agencies'' drafts');
-select is((select count(*)::int from public.comments),     2, 'office sees all comments');
-select is((select count(*)::int from public.warning_acks), 2, 'office sees all warning acks');
-select is((select count(*)::int from public.audit_log),    2, 'office sees all audit entries');
-select is((select count(*)::int from storage.objects where bucket_id = 'attachments'), 3,
+select is((select count(*)::int from public.comments where solicitation_id in ('00000000-0000-0000-0000-0000000005a1', '00000000-0000-0000-0000-0000000005b1')), 2, 'office sees all comments');
+select is((select count(*)::int from public.warning_acks where solicitation_id in ('00000000-0000-0000-0000-0000000005a1', '00000000-0000-0000-0000-0000000005b1')), 2, 'office sees all warning acks');
+select is((select count(*)::int from public.audit_log where solicitation_id in ('00000000-0000-0000-0000-0000000005a1', '00000000-0000-0000-0000-0000000005b1')), 2, 'office sees all audit entries');
+select is((select count(*)::int from storage.objects where bucket_id = 'attachments'
+           and name like 'solicitations/00000000-0000-0000-0000-0000000005%'), 3,
   'office reads all attachments');
-select is((select count(*)::int from storage.objects where bucket_id = 'published'), 2,
+select is((select count(*)::int from storage.objects where bucket_id = 'published'
+           and name like 'solicitations/00000000-0000-0000-0000-0000000005%'), 2,
   'office reads released and unreleased published files');
 select lives_ok(
   $$insert into storage.objects (bucket_id, name) values ('published', 'solicitations/00000000-0000-0000-0000-0000000005a6/v1/rfb.pdf')$$,

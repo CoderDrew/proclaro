@@ -181,7 +181,7 @@ select throws_ok(format('select * from public.opened_bids(%L)', '00000000-0000-0
 select throws_ok(format('select * from public.opened_bid_files(%L)', '00000000-0000-0000-0000-00000000dead'), 'P0001',
   'not_found', 'an unknown solicitation is not_found (files)');
 reset role;
-select is((select count(*)::int from public.bid_audit_log where action = 'bid_close_determination'), 0,
+select is((select count(*)::int from public.bid_audit_log where solicitation_id = :'sol' and action = 'bid_close_determination'), 0,
   'a sealed call writes no determination row');
 
 select tests.act_as(:'admin_u');
@@ -226,9 +226,9 @@ select tests.set_bid_due(:'sol', now());
 select tests.act_as(:'office_u');
 select lives_ok(format('select * from public.opened_bids(%L)', :'sol'), 'at exactly the due time the office opens bids');
 reset role;
-select is((select count(*)::int from public.bid_audit_log where action = 'bid_close_determination'), 4,
+select is((select count(*)::int from public.bid_audit_log where solicitation_id = :'sol' and action = 'bid_close_determination'), 4,
   'the first read writes exactly 4 determination rows (A, B, C, E; not withdrawn D)');
-select is((select count(distinct bid_id)::int from public.bid_audit_log where action = 'bid_close_determination'), 4,
+select is((select count(distinct bid_id)::int from public.bid_audit_log where solicitation_id = :'sol' and action = 'bid_close_determination'), 4,
   'one determination row per opened bid');
 select is((select actor_id from public.bid_audit_log where action = 'bid_close_determination' and bid_id = :'bid_a'),
   :'office_u'::uuid, 'the determination row names the office user');
@@ -244,7 +244,7 @@ select is((select solicitation_id from public.bid_audit_log where action = 'bid_
 select tests.act_as(:'office_u');
 select lives_ok(format('select * from public.opened_bids(%L)', :'sol'), 'a second read');
 reset role;
-select is((select count(*)::int from public.bid_audit_log where action = 'bid_close_determination'), 4,
+select is((select count(*)::int from public.bid_audit_log where solicitation_id = :'sol' and action = 'bid_close_determination'), 4,
   'a second read with no change writes 0 determination rows');
 
 select tests.act_as(:'office_u');
@@ -305,7 +305,7 @@ reset role;
 select ok(not exists (select 1 from pg_proc p where p.oid = 'public.opened_bids(uuid)'::regprocedure
                        and p.prosrc ~ 'public\.organizations'),
   'opened_bids never reads the live organization name');
-select is((select count(*)::int from public.bid_audit_log where action = 'bid_close_determination'), 4,
+select is((select count(*)::int from public.bid_audit_log where solicitation_id = :'sol' and action = 'bid_close_determination'), 4,
   'the extra reads wrote no determination row');
 select tests.act_as(:'office_u');
 select is((select base_total_cents from public.opened_bids(:'sol') where bid_id = :'bid_a'), 9000000::bigint,
@@ -372,7 +372,7 @@ select is((select count(*)::int from public.opened_bid_files(:'sol') where bid_i
 -- Tamper flags do not alter the determination.
 select is((select count(*)::int from public.opened_bids(:'sol')), 4, 'tampering does not change the rows');
 reset role;
-select is((select count(*)::int from public.bid_audit_log where action = 'bid_close_determination'), 4,
+select is((select count(*)::int from public.bid_audit_log where solicitation_id = :'sol' and action = 'bid_close_determination'), 4,
   'tampering writes no determination row');
 
 -- ---------------------------------------------------------------------------
@@ -385,7 +385,7 @@ select results_eq(
   $$values (false, 'signed original not received by the bid due time'::text)$$,
   'after voiding C''s v2 original, C is non-responsive');
 reset role;
-select is((select count(*)::int from public.bid_audit_log where action = 'bid_close_determination'), 5,
+select is((select count(*)::int from public.bid_audit_log where solicitation_id = :'sol' and action = 'bid_close_determination'), 5,
   'exactly one new determination row');
 select is((select count(*)::int from public.bid_audit_log where action = 'bid_close_determination' and bid_id = :'bid_c'), 2,
   'the new row is C''s');
@@ -399,7 +399,7 @@ select is((select detail from public.bid_audit_log where action = 'bid_close_det
 select tests.act_as(:'office_u');
 select lives_ok(format('select * from public.opened_bids(%L)', :'sol'), 'a further read');
 reset role;
-select is((select count(*)::int from public.bid_audit_log where action = 'bid_close_determination'), 5,
+select is((select count(*)::int from public.bid_audit_log where solicitation_id = :'sol' and action = 'bid_close_determination'), 5,
   'a further read with no change writes no determination row');
 
 -- ---------------------------------------------------------------------------

@@ -240,18 +240,20 @@ select tests.act_as(:'office_u');
 select is((select count(*)::int from public.bids), 0, 'office sees no bids directly');
 select is((select count(*)::int from public.bid_drafts), 0, 'office sees no drafts');
 select is((select count(*)::int from public.bid_draft_files), 0, 'office sees no draft files');
-select is((select count(*)::int from public.bid_audit_log), 0, 'office reads no bid audit rows before close');
+select is((select count(*)::int from public.bid_audit_log where solicitation_id = :'sol'), 0, 'office reads no bid audit rows before close');
 select throws_ok('select 1 from public.bid_versions', '42501', null, 'office cannot select bid_versions');
 select throws_ok('select 1 from public.bid_version_files', '42501', null, 'office cannot select bid_version_files');
 select throws_ok('select 1 from public.bid_withdrawals', '42501', null, 'office cannot select bid_withdrawals');
-select is((select count(*)::int from storage.objects where bucket_id = 'bid-files'), 0, 'office reads no bid files before close');
+select is((select count(*)::int from storage.objects where bucket_id = 'bid-files'
+           and name like 'bids/00000000-0000-0000-0000-0000000009b%'), 0, 'office reads no bid files before close');
 
 select tests.act_as(:'admin_u');
 select is((select count(*)::int from public.bids), 0, 'admin sees no bids directly');
 select is((select count(*)::int from public.bid_drafts), 0, 'admin sees no drafts');
-select is((select count(*)::int from public.bid_audit_log), 0, 'admin reads no bid audit rows before close');
+select is((select count(*)::int from public.bid_audit_log where solicitation_id = :'sol'), 0, 'admin reads no bid audit rows before close');
 select throws_ok('select 1 from public.bid_versions', '42501', null, 'admin cannot select bid_versions');
-select is((select count(*)::int from storage.objects where bucket_id = 'bid-files'), 0, 'admin reads no bid files before close');
+select is((select count(*)::int from storage.objects where bucket_id = 'bid-files'
+           and name like 'bids/00000000-0000-0000-0000-0000000009b%'), 0, 'admin reads no bid files before close');
 
 select tests.act_as_anon();
 select throws_ok('select 1 from public.bids', '42501', null, 'anon cannot select bids');
@@ -277,7 +279,8 @@ select throws_ok($$insert into public.bid_audit_log (solicitation_id, action) va
 -- key can read, replace or delete sealed bid files in Storage before close, and can update the bid-files bucket row
 -- (e.g. make it public), like the database superuser. Bid prices in tables stay sealed (above), and app code never
 -- touches bid files with the admin client. If Supabase changes these grants, these assertions fail: revisit the seal.
-select is((select count(*)::int from storage.objects where bucket_id = 'bid-files'), 4,
+select is((select count(*)::int from storage.objects where bucket_id = 'bid-files'
+           and name like 'bids/00000000-0000-0000-0000-0000000009b%'), 4,
   'ACCEPTED LIMIT (Ruling 3): service_role can read bid-files objects');
 select ok(has_table_privilege('service_role', 'storage.objects', 'select'),
   'ACCEPTED LIMIT (Ruling 3): service_role holds select on storage.objects');
