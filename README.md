@@ -36,6 +36,8 @@ Shared building blocks (shell, nav, page header, cards, buttons, fields, tables,
 | Admin (procurement office) | `admin@example.test` | `/admin` |
 | Bidder (Ridgeback Builders LLC) | `bidder.ridgeback@example.test` | `/bidder` |
 | Bidder (Granite Mesa Contractors) | `bidder.granite@example.test` | `/bidder` |
+| Bidder (Juniper Flats Paving) | `bidder.juniper@example.test` | `/bidder` |
+| Bidder (Basalt Creek Builders) | `bidder.basalt@example.test` | `/bidder` |
 
 The two procurement users can each act as reviewer or checker, but never both on the same solicitation.
 
@@ -67,4 +69,23 @@ Self-signup is on (`enable_signup = true`). Changing it needs `npx supabase stop
 4. **`/bidder/solicitations/{id}`**: start a bid, enter prices, upload the required files, choose the bid bond option when one is required, print the pre-filled bid form, and submit. Afterwards the page shows receipts (time, reference, version, no prices) and lets the bidder replace or withdraw until close.
 5. **`/office`**: the "Published" table links each published solicitation to **`/office/solicitations/{id}/bids`**. Before the bid due time the office sees only references, versions and statuses, and can log mailed originals (and void a mistaken entry). After it, the same page shows the internal tabulation, each bid's prices and files, tamper flags and any non-responsive reason.
 
-The seed inserts two published, released solicitations directly: `27-0001` (due in 14 days, bid bond required) and `27-0002`, which closes about 20 minutes after `db:reset` so the opening can be tried locally. They have no RFB or bid-form PDFs in the `published` bucket, so their public download links are absent.
+## Seeded solicitations
+
+The seed inserts five published, released solicitations directly (all fictional). Each has the `rfb_path` and `bid_form_path` that publishing would set, so its public page renders, but no PDF is uploaded, so the documents show as unavailable.
+
+| Number | What it is for |
+|---|---|
+| `27-0001` | Due in 14 days, bid bond required. |
+| `27-0002` | Closes about 20 minutes after `db:reset`, so the opening can be tried locally. No bid bond. |
+| `27-0003` | Closed an hour before `db:reset`, with funding of $1,250,000.00 and two additive alternates. It has four sealed paper-bond bids for walking bid review, the recap and the award. Basalt's bond was not logged, so its bid is pending cure until 17:00 on the next business day after the `db:reset` (the cure deadline is frozen when the bid is first reviewed). Ridgeback claims residency (certificate `CR-0042`), and Granite commits apprentices. With every bid accepted and Ridgeback verified, the recap takes alternate 1 and ranks Ridgeback first by resident preference, then Granite, Juniper and Basalt. Without the verification, Granite ranks first. |
+| `27-0004` | Open for 14 days with a $1.5M estimate, so a bidder sees the apprentice commitment question. |
+| `27-0005` | Closes about 20 minutes after `db:reset`, bid bond required. Juniper's paper-bond bid has no bond original logged, so its cure starts live at close. |
+
+Only `27-0003` has a funding amount; the others fall back to their estimate.
+
+## Tour of the bid review and award slice
+
+1. **`/bidder/solicitations/{id}`** after close: a bidder whose bond is missing sees "Bid bond cure" with the deadline and can upload only the bond. After the recap or memo is posted, each bidder sees its own outcome.
+2. **`/office/solicitations/{id}/review`**: a procurement reviewer sets each bid's outcome (with a note), verifies resident certificates and sends flagged bids to the agency. Then they send the recap (or the all-bids-rejected memo) to check, and a second office user, who did not review these bids, posts it. After the agency picks the award, the office sends it to check and a second user posts it. Every post asks for confirmation. The sender can recall a recap or award under check (for example when nobody else may check it) and then post it alone, which is recorded. Once the recap is sent to check, originals can't be voided or logged and cure bonds can't be uploaded.
+3. **`/agency/solicitations/{id}/bids`**: the agency author decides each flagged bid (reference, reviewer's note and base total only) and picks the award from the posted recap, with a reason when the pick isn't the expected award.
+4. **`/solicitations/{number}`**: the posted recap or memo and the award are public.

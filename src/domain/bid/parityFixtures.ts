@@ -16,6 +16,7 @@ export interface ParityCase {
     alternateCents: (number | null)[];
     bidBondChoice: BidBondChoice | null;
     slots: UploadSlot[];
+    apprenticeCommitment: boolean | null;
   };
   expected: BidIssueCode[];
 }
@@ -27,6 +28,7 @@ const full = {
   alternateCents: [1_500_000] as (number | null)[],
   bidBondChoice: "paper" as BidBondChoice | null,
   slots: ["insurance", "references"] as UploadSlot[],
+  apprenticeCommitment: null as boolean | null,
 };
 
 export const PARITY_CASES: ParityCase[] = [
@@ -54,8 +56,12 @@ export const PARITY_CASES: ParityCase[] = [
   { name: "missing optional section upload", solicitation: big,
     draft: { ...full, slots: ["insurance"] }, expected: ["upload_missing"] },
   { name: "no uploads at all", solicitation: big, draft: { ...full, slots: [] }, expected: ["upload_missing"] },
-  { name: "electronic bond without the bond file", solicitation: big,
-    draft: { ...full, bidBondChoice: "electronic" }, expected: ["upload_missing"] },
+  { name: "electronic bond without the bond file is curable after submit", solicitation: big,
+    draft: { ...full, bidBondChoice: "electronic" }, expected: [] },
+  { name: "electronic bond without the bond file, insurance still missing", solicitation: big,
+    draft: { ...full, bidBondChoice: "electronic", slots: ["references"] }, expected: ["upload_missing"] },
+  { name: "electronic bond without the bond file, no bond choice is not the same", solicitation: big,
+    draft: { ...full, bidBondChoice: null, slots: ["insurance", "references"] }, expected: ["bond_choice_missing"] },
   { name: "extra bond file with a paper choice is not an issue", solicitation: big,
     draft: { ...full, slots: ["insurance", "references", "bid_bond"] }, expected: [] },
   { name: "no bond choice at $150,000.00", solicitation: big,
@@ -71,8 +77,20 @@ export const PARITY_CASES: ParityCase[] = [
     solicitation: { ...small, optionalSections: ["qualifications", "current_work"] },
     draft: { ...full, bidBondChoice: null, slots: ["insurance", "qualifications"] }, expected: ["upload_missing"] },
   { name: "everything wrong at once", solicitation: big,
-    draft: { itemCents: [1, 2, 3], alternateCents: [null], bidBondChoice: null, slots: [] },
+    draft: { itemCents: [1, 2, 3], alternateCents: [null], bidBondChoice: null, slots: [], apprenticeCommitment: null },
     expected: ["price_count", "price_missing", "upload_missing", "bond_choice_missing"] },
+  { name: "apprentice answer missing at $1,000,000.00", solicitation: { ...big, estimateCents: 100_000_000 },
+    draft: full, expected: ["apprentice_missing"] },
+  { name: "apprentice answered below $1,000,000.00", solicitation: { ...big, estimateCents: 99_999_999 },
+    draft: { ...full, apprenticeCommitment: true }, expected: ["apprentice_not_required"] },
+  { name: "apprentice answered no at $1,000,000.00", solicitation: { ...big, estimateCents: 100_000_000 },
+    draft: { ...full, apprenticeCommitment: false }, expected: [] },
+  { name: "apprentice answered yes at $1,000,000.00", solicitation: { ...big, estimateCents: 100_000_000 },
+    draft: { ...full, apprenticeCommitment: true }, expected: [] },
+  { name: "bond and apprentice problems together, bond first", solicitation: { ...big, estimateCents: 100_000_000 },
+    draft: { ...full, bidBondChoice: null }, expected: ["bond_choice_missing", "apprentice_missing"] },
+  { name: "unknown estimate never asks for an apprentice answer", solicitation: { ...big, estimateCents: null },
+    draft: { ...full, bidBondChoice: null, apprenticeCommitment: false }, expected: ["apprentice_not_required"] },
 ];
 
 /** The fixture solicitation's schedule, shared by the TypeScript test and the SQL renderer. */
@@ -117,7 +135,7 @@ export function renderParitySql(cases: ParityCase[] = PARITY_CASES): string {
       `-- ${n}: ${c.name}`,
       `select tests.make_published_solicitation('00000000-0000-0000-0000-0000000008a1', :'author', now() + interval '1 day', ${sqlText(JSON.stringify(overrides))}::jsonb) as sol_${n} \\gset`,
       `insert into public.bids (solicitation_id, bidder_org_id, reference, created_by) values (:'sol_${n}', :'org', app.new_bid_reference(), :'bidder') returning id as bid_${n} \\gset`,
-      `insert into public.bid_drafts (bid_id, version, item_cents, alternate_cents, bid_bond_choice) values (:'bid_${n}', 1, ${sqlText(pgArray(c.draft.itemCents))}::bigint[], ${sqlText(pgArray(c.draft.alternateCents))}::bigint[], ${c.draft.bidBondChoice ? sqlText(c.draft.bidBondChoice) : "null"});`,
+      `insert into public.bid_drafts (bid_id, version, item_cents, alternate_cents, bid_bond_choice, apprentice_commitment) values (:'bid_${n}', 1, ${sqlText(pgArray(c.draft.itemCents))}::bigint[], ${sqlText(pgArray(c.draft.alternateCents))}::bigint[], ${c.draft.bidBondChoice ? sqlText(c.draft.bidBondChoice) : "null"}, ${c.draft.apprenticeCommitment === null ? "null" : String(c.draft.apprenticeCommitment)});`,
     );
     for (const slot of c.draft.slots) {
       out.push(

@@ -54,7 +54,7 @@ export default async function OfficeSolicitationPage({ params }: { params: Promi
   if (error) throw new Error(error.message);
   if (!row) notFound();
 
-  const [settings, holidays, acks, comments, audit, agency, officeOrgs] = await Promise.all([
+  const [settings, holidays, acks, comments, audit, agency, officeOrgs, funding] = await Promise.all([
     supabase.from("settings").select("timezone").eq("id", 1).single(),
     supabase.from("holidays").select("day"),
     supabase.from("warning_acks").select("code, field").eq("solicitation_id", id),
@@ -64,8 +64,12 @@ export default async function OfficeSolicitationPage({ params }: { params: Promi
       .order("created_at", { ascending: false }).order("id", { ascending: false }),
     supabase.from("organizations").select("name").eq("id", row.agency_id).single(),
     supabase.from("organizations").select("id").eq("kind", "office"),
+    // Once published, the funding amount lives only in the confidential, frozen table (Ruling 2).
+    supabase.from("solicitation_funding").select("funding_cents").eq("solicitation_id", id).maybeSingle(),
   ]);
-  for (const r of [settings, holidays, acks, comments, audit, agency, officeOrgs]) if (r.error) throw new Error(r.error.message);
+  for (const r of [settings, holidays, acks, comments, audit, agency, officeOrgs, funding]) {
+    if (r.error) throw new Error(r.error.message);
+  }
 
   const staff = await supabase.from("profiles").select("user_id, display_name")
     .in("org_id", officeOrgs.data!.map((o) => o.id));
@@ -89,7 +93,8 @@ export default async function OfficeSolicitationPage({ params }: { params: Promi
     .filter((c) => c.created_at >= lastStart)
     .map((c) => ({ field: c.field, body: c.body }));
 
-  const data = parseStoredData(row.data);
+  const stored = parseStoredData(row.data);
+  const data = stored && funding.data ? { ...stored, fundingAmountCents: funding.data.funding_cents } : stored;
   if (data === null) {
     // Stored data that no longer matches the schema cannot be edited or published here; the agency must fix it.
     return (

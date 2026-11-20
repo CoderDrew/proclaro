@@ -18,6 +18,8 @@ export interface BidFill {
   itemCents: Cents[];
   alternateCents: Cents[];
   bidBond: BidBondChoice | null;
+  /** The apprentice commitment answer; printed only on $1M+ forms. */
+  apprenticeCommitment: boolean | null;
 }
 
 /** A draft with any missing price cannot be printed; the caller answers 409. */
@@ -37,5 +39,6 @@ export function toBidFill(company: BidderCompany, legalName: string, draft: BidD
     itemCents: draft.itemCents,
     alternateCents: draft.alternateCents,
     bidBond: draft.bidBondChoice,
+    apprenticeCommitment: draft.apprenticeCommitment,
   };
 }

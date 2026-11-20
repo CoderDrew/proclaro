@@ -9,7 +9,8 @@ import { UPLOAD_SLOT_LABELS, type BidBondChoice, type BidDraft, type UploadSlot 
 import { baseTotalCents, requiredUploadSlots, validateBidDraft, type BidRules } from "@/domain/bid/validate";
 import { deriveRequirements } from "@/domain/solicitation/valueBands";
 import {
-  attachBidFile, createBidUploadUrl, removeBidFile, saveBidPrices, setBidBondChoice, startBid, submitBid,
+  attachBidFile, createBidUploadUrl, removeBidFile, saveBidPrices, setApprenticeCommitment, setBidBondChoice, startBid,
+  submitBid,
 } from "./actions";
 import { bidButtonState } from "./logic";
 
@@ -57,7 +58,7 @@ export function BidDraftForm({
   due: string;
   readOnly: boolean;
   rules: BidRules;
-  initial: Pick<BidDraft, "itemCents" | "alternateCents" | "bidBondChoice" | "files">;
+  initial: Pick<BidDraft, "itemCents" | "alternateCents" | "bidBondChoice" | "apprenticeCommitment" | "files">;
 }) {
   const router = useRouter();
   const nItems = rules.schedule.items.length;
@@ -66,19 +67,20 @@ export function BidDraftForm({
   const [alts, setAlts] = useState<string[]>(() => Array.from({ length: nAlts }, (_, i) => toInput(initial.alternateCents[i] ?? null)));
   const [saved, setSaved] = useState({ items: items.join("|"), alts: alts.join("|") });
   const [choice, setChoice] = useState<BidBondChoice | null>(initial.bidBondChoice);
+  const [apprentice, setApprentice] = useState<boolean | null>(initial.apprenticeCommitment);
   const [files, setFiles] = useState<BidDraft["files"]>(initial.files);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const bonds = deriveRequirements(rules.estimateCents ?? 0, false, rules.optionalSections).bonds;
+  const { bonds, apprenticeCredit } = deriveRequirements(rules.estimateCents ?? 0, false, rules.optionalSections);
   const parse = (s: string): Cents | null => (s.trim() === "" ? null : parseMoney(s));
   const draft: BidDraft = useMemo(() => ({
     bidId, reference, version,
     itemCents: items.map(parse), alternateCents: alts.map(parse),
-    bidBondChoice: choice, files,
-  }), [bidId, reference, version, items, alts, choice, files]);
+    bidBondChoice: choice, apprenticeCommitment: apprentice, files,
+  }), [bidId, reference, version, items, alts, choice, apprentice, files]);
   const issues = useMemo(() => validateBidDraft(draft, rules), [draft, rules]);
   const total = baseTotalCents(draft.itemCents.filter((c): c is Cents => c !== null));
   const allItemsEntered = draft.itemCents.every((c) => c !== null);
@@ -89,6 +91,8 @@ export function BidDraftForm({
     allAmountsEntered: draft.itemCents.every((c) => c !== null) && draft.alternateCents.every((c) => c !== null),
     hasItems: nItems > 0,
     issueCount: issues.length,
+    bondChoiceMissing: bonds && choice === null,
+    apprenticeAnswerMissing: apprenticeCredit && apprentice === null,
   });
 
   // The browser warns before the bidder leaves the page (close, reload, typed URL) with unsaved amounts.
@@ -118,6 +122,15 @@ export function BidDraftForm({
     if (!r.ok) { setChoice(previous); setMessage({ kind: "error", text: r.message }); return; }
     // A bond file only belongs with the electronic choice; the server dropped it for the other one.
     if (next !== "electronic") setFiles((prev) => prev.filter((f) => f.slot !== "bid_bond"));
+    router.refresh();
+  }
+
+  async function chooseApprentice(next: boolean) {
+    const previous = apprentice;
+    setApprentice(next);
+    setMessage(null);
+    const r = await setApprenticeCommitment(bidId, next);
+    if (!r.ok) { setApprentice(previous); setMessage({ kind: "error", text: r.message }); return; }
     router.refresh();
   }
 
@@ -226,8 +239,30 @@ export function BidDraftForm({
         </Card>
       )}
 
+      {apprenticeCredit && (
+        <Card title="Apprentice commitment">
+          <fieldset className="ui-fieldset" data-testid="apprentice-commitment">
+            <legend className="visually-hidden">Apprentice commitment</legend>
+            <p>Does the bidder commit apprentices to at least 10% of the labor hours on this project?</p>
+            <Choice label="Yes">
+              <input type="radio" name="apprentice" checked={apprentice === true} disabled={readOnly}
+                onChange={() => void chooseApprentice(true)} />
+            </Choice>
+            <Choice label="No">
+              <input type="radio" name="apprentice" checked={apprentice === false} disabled={readOnly}
+                onChange={() => void chooseApprentice(false)} />
+            </Choice>
+          </fieldset>
+        </Card>
+      )}
+
       <Card title="Required uploads">
         <p>One file per item. Uploading again replaces the current file.</p>
+        {slots.includes("bid_bond") && (
+          <p data-testid="bond-cure-hint">
+            You can submit without it. If it isn&apos;t uploaded by the bid due time, you have until 5 p.m. the next business day to upload it, or the bid is non-responsive.
+          </p>
+        )}
         <div className="ui-upload-list">
           {slots.map((slot) => (
             <BidFileUploader
@@ -255,7 +290,9 @@ export function BidDraftForm({
             Print Bid Form for Signature
           </Button>
           {dirty && <span> Unsaved changes: save your amounts first.</span>}
-          {!dirty && !canPrintForSignature && !readOnly && <span> Enter and save every amount to print the form.</span>}
+          {!dirty && !canPrintForSignature && !readOnly && (
+            <span> Enter and save every amount{bonds && ", choose how the bid bond is provided"}{apprenticeCredit && ", answer the apprentice question"} to print the form.</span>
+          )}
         </div>
       </Card>
 

@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { parseStoredData } from "@/domain/solicitation/schema";
+import { memoReason, parseRecap } from "@/domain/recap/snapshot";
 import { todayIn } from "@/domain/time";
 import { createServerClient } from "@/lib/supabase/server";
 import { formatInstant, onlyPublic } from "@/app/solicitations/status";
 import { Notice, Page, PageHeader } from "@/components/ui";
 import { requireBidderPage } from "../../guard";
 import { BidDraftForm, PrintBlankFormButton, StartBidButton } from "./BidDraftForm";
+import { CurePanel } from "./CurePanel";
+import { OutcomePanel } from "./OutcomePanel";
 import { ReceiptPanel } from "./ReceiptPanel";
-import { describeReceipt, isUuid, parseBiddingState, toBidDraft, toReceipts } from "./logic";
+import { describeReceipt, isUuid, parseBiddingState, parseCureStatus, toBidDraft, toReceipts } from "./logic";
 
 export const dynamic = "force-dynamic";
 
@@ -72,13 +75,42 @@ export default async function BidderSolicitationPage({ params }: { params: Promi
   }
 
   const [draft, files, receipts] = await Promise.all([
-    supabase.from("bid_drafts").select("version, item_cents, alternate_cents, bid_bond_choice").eq("bid_id", bid.data.id).maybeSingle(),
+    supabase.from("bid_drafts").select("version, item_cents, alternate_cents, bid_bond_choice, apprentice_commitment").eq("bid_id", bid.data.id).maybeSingle(),
     supabase.from("bid_draft_files").select("slot, path, file_name").eq("bid_id", bid.data.id),
     supabase.rpc("my_bid_receipts", { p_bid_id: bid.data.id }),
   ]);
   for (const r of [draft, files, receipts]) if (r.error) throw new Error(r.error.message);
 
   const rows = toReceipts(receipts.data ?? []);
+  // After close, the database's cure status for the bid's latest version (before close it says not_required).
+  let cure = null;
+  if (closed && rows.length > 0) {
+    const c = await supabase.rpc("my_bid_cure", { p_bid_id: bid.data.id });
+    if (c.error) throw new Error(c.error.message);
+    const row = c.data?.[0];
+    cure = <CurePanel bidId={bid.data.id} status={parseCureStatus(row?.status)} dueAt={(row?.due_at as string | null) ?? null} tz={tz} />;
+  }
+  // The bid's outcome, which the database returns only once the recap or memo is posted.
+  let outcome = null;
+  if (closed) {
+    const o = await supabase.rpc("my_bid_outcome", { p_bid_id: bid.data.id });
+    if (o.error) throw new Error(o.error.message);
+    const orow = o.data?.[0];
+    if (orow) {
+      // Under the all-rejected memo the memo's reason replaces "Accepted" (read from the public posted row).
+      let memoReasonText: string | null = null;
+      if (orow.recap_kind === "all_rejected") {
+        const r = await supabase.from("recaps").select("snapshot").eq("solicitation_id", sol.data.id).single();
+        if (r.error) throw new Error(r.error.message);
+        const memo = parseRecap(r.data.snapshot);
+        if (!memo || memo.kind !== "all_rejected") throw new Error("memo snapshot did not parse");
+        memoReasonText = memoReason(memo);
+      }
+      outcome = (
+        <OutcomePanel status={orow.status} reason={orow.reason} number={sol.data.number} memoReason={memoReasonText} />
+      );
+    }
+  }
   const panel = (
     <ReceiptPanel
       bidId={bid.data.id}
@@ -95,6 +127,8 @@ export default async function BidderSolicitationPage({ params }: { params: Promi
         {heading}
         <p>Bid reference: <strong>{bid.data.reference}</strong></p>
         <p>Bids are due {due}.{closed && " Bidding on this solicitation has closed."}</p>
+        {cure}
+        {outcome}
         {rows.length === 0 ? <p>This bid has no submitted version.</p> : panel}
       </Page>
     );
@@ -104,6 +138,8 @@ export default async function BidderSolicitationPage({ params }: { params: Promi
   return (
     <Page width="full">
       {heading}
+      {cure}
+      {outcome}
       {panel}
       <BidDraftForm
         bidId={bidDraft.bidId}
@@ -120,6 +156,7 @@ export default async function BidderSolicitationPage({ params }: { params: Promi
           itemCents: bidDraft.itemCents,
           alternateCents: bidDraft.alternateCents,
           bidBondChoice: bidDraft.bidBondChoice,
+          apprenticeCommitment: bidDraft.apprenticeCommitment,
           files: bidDraft.files,
         }}
       />

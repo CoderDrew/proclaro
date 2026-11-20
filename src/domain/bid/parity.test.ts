@@ -19,6 +19,7 @@ function draftOf(d: ParityCase["draft"]): BidDraft {
   return {
     bidId: "b", reference: "AAAA-BBBB", version: 1,
     itemCents: d.itemCents, alternateCents: d.alternateCents, bidBondChoice: d.bidBondChoice,
+    apprenticeCommitment: d.apprenticeCommitment,
     files: d.slots.map((slot) => ({ slot, path: `bids/b/u/${slot}.pdf`, fileName: `${slot}.pdf` })),
   };
 }
@@ -36,7 +37,8 @@ describe("TypeScript validator matches app.bid_draft_problems (shared fixtures)"
 
   it("covers every code the TypeScript validator can emit", () => {
     const seen = new Set<string>(PARITY_CASES.flatMap((c) => c.expected));
-    for (const code of ["price_count", "price_missing", "upload_missing", "bond_choice_missing", "bond_not_required"]) {
+    for (const code of ["price_count", "price_missing", "upload_missing", "bond_choice_missing", "bond_not_required",
+      "apprentice_missing", "apprentice_not_required"]) {
       expect(seen.has(code), code).toBe(true);
     }
   });

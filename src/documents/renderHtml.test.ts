@@ -111,11 +111,19 @@ describe("bid form", () => {
     expect(h).not.toContain("Version");
     expect(h).not.toContain("27-0001");
   });
-  it("bond line and apprentice question follow the bands", () => {
+  it("bond line and apprentice commitment line follow the bands", () => {
     expect(form()).toContain("data-bond-line");
     expect(form({}, 14_999_999)).not.toContain("data-bond-line");
-    expect(form({}, 100_000_000)).toContain("data-apprentice-question");
-    expect(form({}, 99_999_999)).not.toContain("data-apprentice-question");
+    expect(form({}, 100_000_000)).toContain("data-apprentice-line");
+    expect(form({}, 99_999_999)).not.toContain("data-apprentice-line");
+    expect(form({}, 15_000_000)).not.toContain("data-apprentice-line");
+    expect(form({}, 100_000_000)).not.toContain("data-apprentice-question");
+  });
+  it("the blank $1,000,000.00 form asks for the commitment with two write-in blanks", () => {
+    const line = /<p data-apprentice-line[^>]*>([\s\S]*?)<\/p>/.exec(form({}, 100_000_000))?.[1];
+    expect(line).toBe(
+      "The bidder commits apprentices to at least 10% of the labor hours on this project: Yes " +
+      '<span class="write-in"></span> No <span class="write-in"></span>');
   });
   it("federal compliance acknowledgment follows federalFunds", () => {
     expect(form({ federalFunds: true })).toContain("data-federal-ack");
@@ -137,7 +145,7 @@ describe("bid form fill", () => {
   const fill: BidFill = {
     legalName: "R&D Builders <Calder>", address: "1 Elm St, Calder City", contact: "Ana Ridge, 555-0142, ana@example.test",
     residentClaimed: true, residentCertificate: "RC-123", reference: "K7QM-2XVD", bidVersion: 2,
-    itemCents: [12_500_000, 234_567], alternateCents: [1_500_000], bidBond: "paper",
+    itemCents: [12_500_000, 234_567], alternateCents: [1_500_000], bidBond: "paper", apprenticeCommitment: null,
   };
   const ctx = ctxWith(16_000_000, {
     schedule: {
@@ -171,6 +179,18 @@ describe("bid form fill", () => {
   it("bond line reflects the choice", () => {
     expect(filled).toContain("Paper original mailed");
     expect(renderBidFormHtml(ctx, { draft: false, fill: { ...fill, bidBond: "electronic" } })).toContain("Electronic surety bond uploaded");
+  });
+  it("prints the apprentice answer on a $1,000,000.00 filled form", () => {
+    const big = ctxWith(100_000_000, { schedule: ctx.data.schedule });
+    const line = (f: BidFill) =>
+      /<p data-apprentice-line[^>]*>([\s\S]*?)<\/p>/.exec(renderBidFormHtml(big, { draft: false, fill: f }))?.[1];
+    expect(line({ ...fill, apprenticeCommitment: true }))
+      .toBe("The bidder commits apprentices to at least 10% of the labor hours on this project: Yes");
+    expect(line({ ...fill, apprenticeCommitment: false }))
+      .toBe("The bidder commits apprentices to at least 10% of the labor hours on this project: No");
+  });
+  it("a $160,000.00 filled form has no apprentice line", () => {
+    expect(filled).not.toContain("data-apprentice-line");
   });
   it("without a fill the output is unchanged from slice 1", () => {
     expect(renderBidFormHtml(ctx, { draft: false })).toMatchSnapshot();

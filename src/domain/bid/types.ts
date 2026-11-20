@@ -11,16 +11,19 @@ export interface BidDraft {
   itemCents: (Cents | null)[];
   alternateCents: (Cents | null)[];
   bidBondChoice: BidBondChoice | null;
+  /** The apprentice commitment answer ($1M+ solicitations only); null when unanswered. Sealed with the prices. */
+  apprenticeCommitment: boolean | null;
   files: { slot: UploadSlot; path: string; fileName: string }[];
 }
 
 /** Matches the codes app.bid_draft_problems returns (file_missing is raised by the database only). */
 export type BidIssueCode =
-  | "price_count" | "price_missing" | "upload_missing" | "file_missing" | "bond_choice_missing" | "bond_not_required";
+  | "price_count" | "price_missing" | "upload_missing" | "file_missing" | "bond_choice_missing" | "bond_not_required"
+  | "apprentice_missing" | "apprentice_not_required";
 
 export interface BidIssue {
   code: BidIssueCode;
-  /** For example "items.1", "alternates", "uploads.references", "bond". */
+  /** For example "items.1", "alternates", "uploads.references", "bond", "apprentice". */
   field: string;
   message: string;
 }

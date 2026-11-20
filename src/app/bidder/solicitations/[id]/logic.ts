@@ -195,13 +195,30 @@ export async function runSetBondChoice(
   return { ok: true };
 }
 
+/**
+ * Sets (or clears, with null) the apprentice commitment answer on the draft. The update policy (own bid, bidding
+ * open) does the enforcing; the validator and app.bid_draft_problems decide whether the solicitation asks for it.
+ */
+export async function runSetApprenticeCommitment(
+  bidId: string, value: boolean | null,
+  deps: { update(bidId: string, patch: { apprentice_commitment: boolean | null }): Promise<void> },
+): Promise<BidActionResult> {
+  if (!isUuid(bidId)) throw new Error("not_found");
+  if (value !== null && value !== true && value !== false) throw new Error("invalid_bid");
+  await deps.update(bidId, { apprentice_commitment: value });
+  return { ok: true };
+}
+
 // ---------------------------------------------------------------------------
 // Data layer
 // ---------------------------------------------------------------------------
 /** Rows as the generated types describe them. item_cents can hold nulls even though it is typed number[]. */
 export function toBidDraft(
   bid: { id: string; reference: string },
-  draft: { version: number; item_cents: number[]; alternate_cents: number[]; bid_bond_choice: BidBondChoice | null },
+  draft: {
+    version: number; item_cents: number[]; alternate_cents: number[]; bid_bond_choice: BidBondChoice | null;
+    apprentice_commitment: boolean | null;
+  },
   files: { slot: UploadSlot; path: string; file_name: string }[],
 ): BidDraft {
   return {
@@ -209,6 +226,7 @@ export function toBidDraft(
     itemCents: [...draft.item_cents] as (Cents | null)[],
     alternateCents: [...draft.alternate_cents] as (Cents | null)[],
     bidBondChoice: draft.bid_bond_choice,
+    apprenticeCommitment: draft.apprentice_commitment,
     files: files.map((f) => ({ slot: f.slot, path: f.path, fileName: f.file_name })),
   };
 }
@@ -298,8 +316,10 @@ export const withdrawConfirmation = (version: number, due: string) =>
 
 /**
  * Which bid-page buttons are enabled. Presentation only: the server actions and the form route still validate.
- * The filled form prints the SAVED draft, so it needs every amount (items and alternates) entered and saved;
- * Submit also needs a draft with no validation issues. Unsaved amounts disable both.
+ * The filled form prints the SAVED draft, so it needs every amount (items and alternates) entered and saved and,
+ * because the signed original must match what will be sealed (Ruling 6), the bond choice when bonds are required
+ * and the apprentice answer on a $1M+ solicitation. Submit also needs a draft with no validation issues. Unsaved
+ * amounts disable both.
  */
 export function bidButtonState(s: {
   readOnly: boolean;
@@ -311,10 +331,56 @@ export function bidButtonState(s: {
   /** At least one item exists on the schedule. */
   hasItems: boolean;
   issueCount: number;
+  /** Bonds are required and no bond choice is saved. */
+  bondChoiceMissing: boolean;
+  /** The solicitation asks for the apprentice commitment and no answer is saved. */
+  apprenticeAnswerMissing: boolean;
 }): { canPrintForSignature: boolean; canSubmit: boolean } {
   const saved = !s.dirty && !s.saving;
   return {
-    canPrintForSignature: saved && s.hasItems && s.allAmountsEntered,
+    canPrintForSignature: saved && s.hasItems && s.allAmountsEntered && !s.bondChoiceMissing && !s.apprenticeAnswerMissing,
     canSubmit: !s.readOnly && saved && s.issueCount === 0,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Bid-bond cure (after close)
+// ---------------------------------------------------------------------------
+export type CureStatus = "not_required" | "ok" | "cured" | "pending" | "failed";
+const CURE_STATUSES: readonly CureStatus[] = ["not_required", "ok", "cured", "pending", "failed"];
+
+/** The database's my_bid_cure status; anything unexpected fails safe to not_required (nothing shown). */
+export function parseCureStatus(v: unknown): CureStatus {
+  return CURE_STATUSES.includes(v as CureStatus) ? (v as CureStatus) : "not_required";
+}
+
+/** The bidder-facing sentence for a cure status, or null when there is nothing to say. `due` is formatted. */
+export function cureStatusText(status: CureStatus, due: string): string | null {
+  switch (status) {
+    case "pending": return `Your bid bond was not received. Upload it by ${due} or the bid will be disqualified.`;
+    case "cured": return "Bid bond received during the cure period.";
+    case "failed": return "Bid bond not received by the cure deadline. The bid is non-responsive.";
+    default: return null;
+  }
+}
+
+/** Plain-language text for a cure upload error. */
+export function cureMessageFor(e: unknown): string {
+  const code = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : "";
+  switch (code) {
+    case "cure_closed": return "The cure deadline has passed.";
+    case "invalid_state": return "This bid has no bond to cure.";
+    case "invalid_data":
+    case "invalid_bid": return MSG.upload;
+  }
+  return bidMessageFor(e);
+}
+
+/** Records the uploaded bond: the path must be under the caller's own bid; the database does every other check. */
+export async function runSubmitCureBond(
+  bidId: string, path: string, fileName: string,
+  deps: { submit(bidId: string, path: string, fileName: string): Promise<string> },
+): Promise<BidActionResult<{ uploadedAt: string }>> {
+  assertOwnBidPath(bidId, path);
+  return { ok: true, uploadedAt: await deps.submit(bidId, path, displayFileName(fileName)) };
 }

@@ -28,6 +28,7 @@ export function ctxWith(
     requester: { name: "Pat Example", email: "pat@example.test", phone: "555-0100" },
     projectManager: { name: "Sam Example", email: "sam@example.test", phone: "555-0101" },
     estimateCents,
+    fundingAmountCents: estimateCents,
     fundingSource: "major_maintenance",
     federalFunds: false,
     releaseDate: "2027-06-01",

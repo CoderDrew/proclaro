@@ -8,8 +8,8 @@ import type { Database } from "@/lib/supabase/database.types";
 import { createServerClient } from "@/lib/supabase/server";
 import { requireBidderAction } from "../../guard";
 import {
-  bidMessageFor, bidUploadPath, denialFrom, isUploadSlot, isUuid, parseBiddingState, runAttachFile, runRemoveFile, runSavePrices, runSetBondChoice,
-  runSubmitBid, toBidDraft, toResult, type BidActionResult, type BidReceipt, type FileDeps,
+  bidMessageFor, bidUploadPath, cureMessageFor, denialFrom, runSubmitCureBond, isUploadSlot, isUuid, parseBiddingState, runAttachFile, runRemoveFile, runSavePrices, runSetApprenticeCommitment,
+  runSetBondChoice, runSubmitBid, toBidDraft, toResult, type BidActionResult, type BidReceipt, type FileDeps,
 } from "./logic";
 
 type Supabase = SupabaseClient<Database>;
@@ -162,6 +162,22 @@ export async function setBidBondChoice(bidId: string, choice: BidBondChoice | nu
   });
 }
 
+/** Sets the apprentice commitment answer (true, false, or null to clear) while bidding is open. */
+export async function setApprenticeCommitment(bidId: string, value: boolean | null): Promise<BidActionResult> {
+  return toResult(async () => {
+    await requireBidderAction();
+    assertBidId(bidId);
+    const supabase = await createServerClient();
+    return runSetApprenticeCommitment(bidId, value, {
+      async update(id, patch) {
+        const { data, error } = await supabase.from("bid_drafts").update(patch).eq("bid_id", id).select("bid_id");
+        if (error) throw new Error(error.message);
+        if (!data || data.length !== 1) throw new Error(await denialCode(supabase, id));
+      },
+    });
+  });
+}
+
 /** Submits the stored draft. The draft is loaded and re-validated here; the database does the final checks. */
 export async function submitBid(bidId: string): Promise<Awaited<ReturnType<typeof runSubmitBid>>> {
   try {
@@ -174,7 +190,7 @@ export async function submitBid(bidId: string): Promise<Awaited<ReturnType<typeo
         if (bid.error) throw new Error(bid.error.message);
         if (!bid.data) return null;
         const [draft, files, sol] = await Promise.all([
-          supabase.from("bid_drafts").select("version, item_cents, alternate_cents, bid_bond_choice").eq("bid_id", id).maybeSingle(),
+          supabase.from("bid_drafts").select("version, item_cents, alternate_cents, bid_bond_choice, apprentice_commitment").eq("bid_id", id).maybeSingle(),
           supabase.from("bid_draft_files").select("slot, path, file_name").eq("bid_id", id),
           supabase.from("solicitations").select("published_snapshot").eq("id", bid.data.solicitation_id).maybeSingle(),
         ]);
@@ -220,4 +236,51 @@ export async function withdrawBid(bidId: string): Promise<BidActionResult> {
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+}
+
+/**
+ * A signed upload URL for the bid bond during the cure period. The Storage insert policy (the caller's own bid,
+ * closed, cure pending: app.can_upload_bid_file) is evaluated with the caller's JWT, so nothing else can be uploaded.
+ */
+export async function createCureUploadUrl(
+  bidId: string, fileName: string,
+): Promise<BidActionResult<{ path: string; token: string }>> {
+  try {
+    await requireBidderAction();
+    assertBidId(bidId);
+    const supabase = await createServerClient();
+    const path = bidUploadPath(bidId, randomUUID(), String(fileName));
+    const { data, error } = await supabase.storage.from("bid-files").createSignedUploadUrl(path);
+    if (error || !data) {
+      // Refused by the policy: ask the database why (its clock, its rules).
+      const cure = await supabase.rpc("my_bid_cure", { p_bid_id: bidId });
+      const status = cure.data?.[0]?.status;
+      if (cure.error) throw new Error(cure.error.message);
+      throw new Error(status === "failed" ? "cure_closed" : status === "pending" ? "invalid_bid" : "invalid_state");
+    }
+    return { ok: true, path: data.path, token: data.token };
+  } catch (e) {
+    return { ok: false, message: cureMessageFor(e) };
+  }
+}
+
+/** Records the uploaded bond as the bid's cure. submit_cure_bond re-checks the deadline on the database clock. */
+export async function submitCureBond(
+  bidId: string, path: string, fileName: string,
+): Promise<BidActionResult<{ uploadedAt: string }>> {
+  try {
+    await requireBidderAction();
+    assertBidId(bidId);
+    const supabase = await createServerClient();
+    return await runSubmitCureBond(bidId, path, fileName, {
+      async submit(id, p, name) {
+        const { data, error } = await supabase.rpc("submit_cure_bond", { p_bid_id: id, p_path: p, p_file_name: name });
+        if (error) throw new Error(error.message);
+        return data;
+      },
+    });
+  } catch (e) {
+    if (!(e instanceof Error) || !/^[a-z_]+$/.test(e.message)) console.error("submitCureBond failed", e);
+    return { ok: false, message: cureMessageFor(e) };
+  }
 }

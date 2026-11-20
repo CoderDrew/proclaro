@@ -4,7 +4,9 @@ import { createServerClient } from "@/lib/supabase/server";
 import { formatDate, formatDateTime, formatTimeWithZone } from "@/documents/format";
 import { parseStoredData } from "@/domain/solicitation/schema";
 import { todayIn } from "@/domain/time";
-import { Card, Page, PageHeader, StatusBadge, Table, Td, Th } from "@/components/ui";
+import { parseAward, parseRecap, memoText } from "@/domain/recap/snapshot";
+import { RecapTable } from "@/components/RecapTable";
+import { Card, DateTime, Money, Page, PageHeader, StatusBadge, Table, Td, Th } from "@/components/ui";
 import { bidStatus, formatInstant, onlyPublic } from "../status";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +29,7 @@ export default async function SolicitationPage({ params }: { params: Promise<{ n
 
   const { data: row, error } = await onlyPublic(
     supabase.from("solicitations")
-      .select("number, data, agency_id, bid_due_at, release_date, rfb_path, bid_form_path, published_snapshot"),
+      .select("id, number, data, agency_id, bid_due_at, release_date, rfb_path, bid_form_path, published_snapshot"),
     todayIn(tz, new Date()),
   )
     .eq("number", number)
@@ -56,6 +58,17 @@ export default async function SolicitationPage({ params }: { params: Promise<{ n
     url: await link(a.storagePath, a.storagePath.split("/").pop() ?? "attachment"),
   })));
 
+  // The posted recap or memo and the award are the only public disclosure of bids. Only kind, snapshot and posted_at are
+  // read (the rows also carry user ids), and nothing about bids is read before posting.
+  const [recapRes, awardRes] = await Promise.all([
+    supabase.from("recaps").select("kind, snapshot, posted_at").eq("solicitation_id", row.id).maybeSingle(),
+    supabase.from("awards").select("snapshot, posted_at").eq("solicitation_id", row.id).maybeSingle(),
+  ]);
+  if (recapRes.error) throw new Error(recapRes.error.message);
+  if (awardRes.error) throw new Error(awardRes.error.message);
+  const recap = recapRes.data ? parseRecap(recapRes.data.snapshot) : null;
+  const award = awardRes.data ? parseAward(awardRes.data.snapshot) : null;
+
   const status = bidStatus(row.bid_due_at, new Date());
   const dates: [string, string][] = [
     ["Release date", formatDate(data.releaseDate)],
@@ -76,7 +89,12 @@ export default async function SolicitationPage({ params }: { params: Promise<{ n
         crumbs={<Link href="/solicitations">All solicitations</Link>}
         eyebrow={`${number} · ${org.data.name}`}
         title={data.longTitle}
-        actions={<StatusBadge status={{ kind: "bidding", status }} />}
+        actions={(
+          <>
+            <StatusBadge status={{ kind: "bidding", status }} />
+            {award ? <StatusBadge status={{ kind: "evaluation", stage: "awarded", awaitingAgency: false }} /> : null}
+          </>
+        )}
       />
 
       <Card title="Summary">
@@ -101,6 +119,36 @@ export default async function SolicitationPage({ params }: { params: Promise<{ n
           ))}
         </ul>
       </Card>
+
+      {recap && recapRes.data && recap.kind === "recap" ? (
+        <Card title="Bid recap" data-testid="public-recap">
+          <RecapTable recap={recap} />
+          <p>Posted <DateTime iso={recapRes.data.posted_at} tz={tz} />.</p>
+        </Card>
+      ) : null}
+
+      {recap && recapRes.data && recap.kind === "all_rejected" ? (
+        <Card title="All bids rejected" data-testid="public-memo">
+          <p>{memoText(recap)}</p>
+          <p>Posted <DateTime iso={recapRes.data.posted_at} tz={tz} />.</p>
+        </Card>
+      ) : null}
+
+      {award && awardRes.data ? (
+        <Card title="Award" data-testid="public-award">
+          <p><strong>{award.bidderName}</strong> for <Money cents={award.amountCents} />.</p>
+          {award.selectedAlternates.length === 0 ? (
+            <p>Base bid only.</p>
+          ) : (
+            <ul>
+              {award.selectedAlternates.map((n) => (
+                <li key={n}>Alternate {n}: {award.alternates[n - 1]?.description ?? "Description unavailable"}</li>
+              ))}
+            </ul>
+          )}
+          <p>Posted <DateTime iso={awardRes.data.posted_at} tz={tz} />.</p>
+        </Card>
+      ) : null}
     </Page>
   );
 }

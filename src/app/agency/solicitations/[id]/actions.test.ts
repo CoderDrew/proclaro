@@ -14,7 +14,7 @@ function validData(over: Partial<SolicitationData> = {}): SolicitationData {
     location: { address: "1 Example Way", city: "Calder City", county: "Calder" },
     requester: { name: "Pat Example", email: "pat@example.test", phone: "555-0100" },
     projectManager: { name: "Sam Example", email: "sam@example.test", phone: "555-0101" },
-    estimateCents: 15_000_000, fundingSource: "major_maintenance", federalFunds: false,
+    estimateCents: 15_000_000, fundingAmountCents: 15_000_000, fundingSource: "major_maintenance", federalFunds: false,
     releaseDate: "2027-01-12", adStart: "2027-01-12", adEnd: "2027-01-28", newspapers: "Calder Courier",
     questionsDue: { date: "2027-01-20", time: "13:00" }, answersDue: { date: "2027-01-22", time: "13:00" },
     bidDueDate: "2027-02-02",

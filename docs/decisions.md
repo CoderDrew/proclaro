@@ -203,6 +203,59 @@ A visual pass over every page. Behaviour, server logic, generated PDFs and test 
 - **No admin overview link** in the nav; admins reach their pages through the five admin links.
 - **No dark mode.** The spec excluded it.
 
+## 2026-11-19 — Bid bond may be cured after submit (Drew)
+
+A bidder may submit a bid whose bond choice is "electronic" with no bid bond file. At close that bid's bond counts as missing and enters the cure: the bidder has until 5 p.m. the next business day to upload it, or the bid is non-responsive ("bid bond not received by the cure deadline"). The bond choice itself stays required wherever a bond is required, and printing the bid form for signature still needs the choice and the apprentice answer. The bidder form shows the bond slot but no longer marks it required; the office tabulation says "Electronic bond (not uploaded)" until a sealed bond file exists.
+
+## 2026-11-19 — Slice 2b, as built
+
+Bid review, the bond cure, the recap and the award, from close to a posted award. Design: `docs/superpowers/specs/2026-11-19-bid-review-award-design.md`; plan: `docs/superpowers/plans/2026-11-19-bid-review-award.md`.
+
+- **Stored stages versus displayed ones.** `public.evaluation_stage` stores `bid_review`, `recap_check`, `recap_posted`, `award_check`, `awarded` and `all_rejected`, one `evaluations` row per solicitation, created at the first office read after close. The spec's "awaiting agency" is displayed, not stored: `bid_review` with `flags_released_at` set and a bid still `flagged`. Its "award pending" is `recap_posted`. So the office can change outcomes until it sends the recap to check, and the agency's state never needs a transition back. Every stage change goes through a definer function that writes one audit row.
+- **One SQL source for the recap.** `app.rank_recap` computes every recap figure from the sealed `bid_versions` cents, the published estimate and alternates, and the confidential funding amount. Nobody types a number. The office preview, the snapshot sent to check, the posted `recaps` row and the award all come from it; TypeScript only formats the frozen snapshot. Posting rebuilds the recap and refuses with `recap_stale` if it no longer matches the draft that was checked.
+- **The recap algorithm (0021, after the Ruling 9 fix).** All arithmetic is exact integers.
+  - For a bid *b* and a set *S* of selected alternates, the actual price is *T(b,S)* = base + the selected additive alternates − the selected deductive ones. The evaluated price is *E(b,S)* = *T* × 99 when the bid commits apprentices on a $1M+ job (estimate ≥ $1,000,000), else *T* × 100, in hundredths of a cent. The displayed evaluated price is *E* rounded half up to cents.
+  - **Memo first.** If every accepted bid's total with all deductive alternates taken exceeds funding, the result is the "all bids rejected" memo (reason `over_funding`); with no deductives this is the spec's "every base total exceeds funding". Zero accepted bids give the memo with reason `no_accepted_bids`.
+  - **Alternate selection** (one set for every bid). "Fits" means the bid(s) with the lowest *E* under *S* (no resident preference) have *T* ≤ funding. Start with no alternates. Only if that doesn't fit, take deductive alternates in listed order until it fits. Then, if it fits, take additive alternates in listed order while the next one still fits, stopping at the first that doesn't. Deductives are never taken when the base already fits. If it still doesn't fit after every deductive (the apprentice credit made an over-funding bid the lowest), *S* stays at all deductives, no additive is taken, and the recap carries a `winnerOverFunding` warning.
+  - A negative total, in the memo check or the final *S*, is `invalid_data`.
+  - **Ranking.** *N* is the lowest *E* among non-resident bids. A resident bid whose resident certificate the office verified is preferred when *E* × 100 ≤ *N* × 105 (within 5%, inclusive). Bids sort by (preferred first, then *E*); rank is 1 + the number of strictly smaller keys (1, 1, 3). Bids with the same key are tied. The expected winner is the sole rank-1 bid; a tie at rank 1 has none and goes to the agency.
+- **Cure counting.** A bond cure is due when bonds are required and, at close, an electronic choice has no sealed bond file or a paper bond's original was not received and logged by the bid due time. The deadline is 17:00 local on the next business day (weekends and `holidays` skipped), frozen when the evaluation row is created. An uploaded bond counts only with `uploaded_at < deadline` (the upload is refused at or after it). A logged paper bond counts with `received_at <= deadline` and `logged_at <= deadline`, the same `<=` rule as 2a originals. A bid still uncured at the deadline is non-responsive, "bid bond not received by the cure deadline", automatically; nobody can change it.
+- **The bidder sees its outcome only after posting.** Outcomes can change until send-to-check, so a bidder sees its own outcome only once the recap or memo is posted. Its cure status is shown live from close.
+- **The agency's flagged view is minimal.** For each bid the office flagged, the agency sees the reference, the reviewer's note, the base total and the current decision. It does not see the bidder's name, which the decision doesn't need. A rejected flagged bid is left out of the recap.
+- **Two-person check.** Posting the recap, the memo and the award needs a different office user from the one who prepared it. The fallback (`post_*_alone`) is stamped `single_reviewer` and audited as "no second reviewer available". Posting is irreversible, so every post (recap, memo, award, and each "post alone") asks for confirmation first. Buttons a user can never use (the sender or a past reviewer checking the recap, the sender checking the award) are disabled with the reason.
+- **Originals and cure frozen after bid review (Ruling 14).** After close, voiding or logging an original and uploading a cure bond are allowed only while the evaluation is in `bid_review`. Each takes the bid row lock and then the evaluation lock (the same order as `review_bids`), so a posted recap or award can't be contradicted by a later void or a reopened cure. Before close nothing changes. A void made after close counts as reviewing the bids for the recap's same-person rule.
+
+### Rulings made during the build
+
+Rulings 2–14 changed or refined the plan. Ruling 1 accepted the planner's resolutions as written.
+
+2. **Funding amount stays confidential until posting.** It moves out of the public data at publish into `solicitation_funding` (agency and office only). Public pages and bidders see it only in the posted recap.
+3. **Cure deadline frozen at close.** It is computed when the evaluation row is created; later holiday edits don't move it.
+4. **Alternates follow common practice.** Deductives are taken only to get the lowest bid within funding, then additives while it still fits. One set applies to every bid.
+5. **An expected winner over funding is a warning, not a block.** The agency decides.
+6. **The printed bid form needs the bond choice and the apprentice answer**, so the signed original matches what will be sealed.
+7. **A bid may be submitted without its electronic bond file (Drew).** It enters the cure at close.
+8. **The agency can't read the unposted recap.** `evaluations` has a column-level grant; the draft is read only through office definer functions.
+9. **The memo means every bid is over funding** even with all deductives taken; otherwise it's a recap, with the over-funding warning when needed. (Revised from a first version that issued the memo when only the lowest evaluated bid was over.)
+10. **Irreversible posts ask for confirmation** ("This makes ... public and can't be undone."): Post recap, Post memo, Post award and each "Post alone".
+11. **An objecting checker can't be bypassed.** After a disagree on the award, sending it to check again or posting it alone needs a newer agency pick.
+12. **No two-user deadlock on the award.** The same-person rule applies to the current round's sender only, so the person who disagreed can send round two and the first sender can check it. The recap keeps the stricter rule (no reviewer of the bids may check), with the recorded fallback.
+13. **Recall.** The sender can recall from `recap_check` (back to `bid_review`, draft cleared) or `award_check` (back to `recap_posted`, the pick kept and no disagreement recorded), so an office that has no eligible checker is never stuck; the recorded fallback then applies. `recall_recap` and `recall_award` are sender-only and audited.
+14. **No changes behind a frozen recap.** After close, `void_bid_original`, `log_bid_original` and the bond cure upload work only in `bid_review`. To correct an original once the recap is under check, recall it (or have the checker send it back) first.
+
+### Known gaps
+
+- **The expected winner can exceed funding** under the resident preference or the apprentice credit. It is shown as a warning, not blocked.
+- **No warning when tied rank-1 bids are over funding.** `winnerOverFunding` is set only for a sole expected winner. An exact evaluated tie at rank 1 that is also over funding (after every deductive) shows no warning; the table still shows each total and the funding amount, and the agency picks.
+- **No two-session race test for the evaluation lock.** The lock is pinned by single-transaction fixtures only.
+- **A bid bond may be cured after submit (Ruling 7).** A bidder can submit an electronic bond choice with no file and rely on the cure, so the cure is part of the normal path, not only for a lost paper bond.
+- **Award check rounds (Rulings 11–12)** depend on timestamp ordering (a pick newer than the latest disagree) rather than a stored link to the disputed pick.
+- **The recap fallback after a disagree is allowed and recorded.** A reviewer whose recap was sent back can post it alone as "no second reviewer available"; it is stamped and audited, not blocked.
+- **`recap_stale` is now a backstop only.** Since Ruling 14 no API path changes a bid's status after the recap is sent to check, so `post_recap`'s staleness check guards against future paths rather than a known race.
+- **The memo is blocked by an unverified resident claim** even though residency can't change a memo. Verifying the claim (one action) clears it.
+- **Seeded solicitations have no PDFs.** The seed sets `rfb_path` and `bid_form_path` so public pages render, but SQL can't upload file bytes, so their documents show as unavailable.
+- **The posted `recaps` and `awards` rows include office user ids** (`prepared_by`, `checked_by`) readable by anyone; the public page shows only the snapshot.
+
 ## Open questions
 
 See `docs/discovery.md` §3.

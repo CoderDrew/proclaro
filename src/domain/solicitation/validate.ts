@@ -6,7 +6,8 @@ export type IssueCode =
   | "required" | "short_title_too_long" | "estimate_below_minimum" | "schedule_empty"
   | "date_order" | "bid_due_too_soon" | "release_too_soon" | "ad_period_too_short" | "ad_ends_after_bid_due"
   | "prebid_incomplete" | "prebid_out_of_window" | "attachment_missing"
-  | "bid_due_non_working_day" | "mandatory_prebid_soon" | "placeholder_text" | "ad_starts_before_release";
+  | "bid_due_non_working_day" | "mandatory_prebid_soon" | "placeholder_text" | "ad_starts_before_release"
+  | "funding_below_estimate";
 
 /** `field` is a dotted path, e.g. "preBid.date". */
 export interface Issue { code: IssueCode; field: string; message: string }
@@ -17,6 +18,7 @@ type Rule = (d: SolicitationData, ctx: ValidationContext) => Issue[];
 
 const WARNING_CODES: ReadonlySet<IssueCode> = new Set<IssueCode>([
   "bid_due_non_working_day", "mandatory_prebid_soon", "placeholder_text", "ad_starts_before_release",
+  "funding_below_estimate",
 ]);
 
 const SHORT_TITLE_MAX = 30;
@@ -49,6 +51,7 @@ const requiredRule: Rule = (d) => {
     need(`${who}.phone`, d[who].phone);
   }
   need("estimateCents", d.estimateCents);
+  need("fundingAmountCents", d.fundingAmountCents);
   need("fundingSource", d.fundingSource);
   if (d.fundingSource === "other") need("fundingOther", d.fundingOther);
   need("federalFunds", d.federalFunds);
@@ -77,6 +80,12 @@ const shortTitleRule: Rule = (d) =>
 const estimateRule: Rule = (d) =>
   d.estimateCents !== null && d.estimateCents < BLOCKED_BELOW
     ? [issue("estimate_below_minimum", "estimateCents", "Estimate must be at least $50,000.00.")]
+    : [];
+
+/** Funding below the estimate is allowed (the agency may add funds or rely on deductive alternates), so a warning. */
+const fundingRule: Rule = (d) =>
+  d.estimateCents !== null && d.fundingAmountCents !== null && d.fundingAmountCents < d.estimateCents
+    ? [issue("funding_below_estimate", "fundingAmountCents", "Funding amount is below the estimate.")]
     : [];
 
 const scheduleRule: Rule = (d) =>
@@ -176,7 +185,7 @@ const placeholderRule: Rule = (d) =>
     .map((f) => issue("placeholder_text", f, "This text still contains template placeholder brackets."));
 
 const RULES: Rule[] = [
-  requiredRule, shortTitleRule, estimateRule, scheduleRule, dateOrderRule, bidDueGapRule,
+  requiredRule, shortTitleRule, estimateRule, fundingRule, scheduleRule, dateOrderRule, bidDueGapRule,
   releaseRule, adRule, adBeforeReleaseRule, preBidRule, attachmentRule, nonWorkingRule, mandatoryPreBidRule, placeholderRule,
 ];
 

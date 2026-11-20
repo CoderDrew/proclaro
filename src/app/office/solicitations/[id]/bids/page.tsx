@@ -6,7 +6,7 @@ import { UPLOAD_SLOT_LABELS } from "@/domain/bid/types";
 import type { SolicitationData } from "@/domain/solicitation/types";
 import { ITEM_LABELS, type OriginalItem } from "./logic";
 import { OriginalsPanel, type EntryView } from "./OriginalsPanel";
-import { Card, Money, Notice, Page, PageHeader, StatusBadge, Table, Td, Th, EmptyState } from "@/components/ui";
+import { ButtonLink, Card, Money, Notice, Page, PageHeader, StatusBadge, Table, Td, Th, EmptyState } from "@/components/ui";
 import { toTabulation, type OpenedBid, type OpenedFile } from "./tabulation";
 
 export const dynamic = "force-dynamic";
@@ -111,15 +111,21 @@ async function openingSection(
     }
     throw new Error(opened.error.message);
   }
-  const files = await supabase.rpc("opened_bid_files", { p_solicitation_id: id });
+  const [files, review] = await Promise.all([
+    supabase.rpc("opened_bid_files", { p_solicitation_id: id }),
+    // Only for each bid's bond cure status, so the bond label does not contradict a cure made after close.
+    supabase.rpc("review_bids", { p_solicitation_id: id }),
+  ]);
   if (files.error) throw new Error(files.error.message);
+  if (review.error) throw new Error(review.error.message);
+  const cures = Object.fromEntries(review.data.map((r) => [r.bid_id, r.cure_status]));
 
   const sd = ((snapshot as { data?: SolicitationData } | null)?.data ?? data) as SolicitationData;
   const items = sd.schedule?.items ?? [];
   const alternates = sd.schedule?.alternates ?? [];
   const bids = opened.data as OpenedBid[];
   const fileRows = files.data as OpenedFile[];
-  const tab = toTabulation(bids, alternates, fileRows);
+  const tab = toTabulation(bids, alternates, fileRows, cures);
 
   // Signed links from the office user's own client: storage RLS allows only opened files.
   const present = fileRows.filter((f) => f.file_status !== "missing").map((f) => f.path);
@@ -132,6 +138,11 @@ async function openingSection(
 
   return (
     <>
+      <div className="ui-inline-actions">
+        <ButtonLink variant="primary" href={`/office/solicitations/${id}/review`} data-testid="review-link">
+          Review bids
+        </ButtonLink>
+      </div>
       <Card as="section" title="Tabulation (internal)">
         <p className="muted ui-office-note">
           Computed from the submitted prices. Ordered by base total. Not for posting.

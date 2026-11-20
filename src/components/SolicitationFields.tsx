@@ -38,11 +38,11 @@ interface FieldCtxValue {
 const FieldCtx = createContext<FieldCtxValue | null>(null);
 
 // A real top-level component (not defined inside the form) so inputs keep focus across renders.
-function Field({ label, field, wide, labelId, children }: { label: string; field?: string; wide?: boolean; labelId?: string; children: ReactNode }) {
+function Field({ label, field, wide, labelId, hint, children }: { label: string; field?: string; wide?: boolean; labelId?: string; hint?: string; children: ReactNode }) {
   const c = useContext(FieldCtx)!;
   return (
     <div className={wide ? "sol-cell sol-cell--wide" : "sol-cell"}>
-      <UiField label={label} labelId={labelId}>{children}</UiField>
+      <UiField label={label} labelId={labelId} hint={hint}>{children}</UiField>
       {field && (
         <>
           <IssueList issues={c.errors.filter((i) => i.field === field)} kind="error" />
@@ -200,6 +200,12 @@ export function SolicitationFields({
               <div className="ui-field-grid ui-field-grid--auto">
                 <Field label="Estimated cost" field="estimateCents">
                   <MoneyInput cents={data.estimateCents} onChange={(c) => set("estimateCents", c)} />
+                </Field>
+                <Field
+                  label="Funding amount" field="fundingAmountCents"
+                  hint="The most the agency can spend. Frozen when the solicitation is published."
+                >
+                  <MoneyInput cents={data.fundingAmountCents} onChange={(c) => set("fundingAmountCents", c)} />
                 </Field>
                 <Field label="Funding source" field="fundingSource">
                   <select value={data.fundingSource ?? ""} onChange={(e) => set("fundingSource", e.target.value || null)}>

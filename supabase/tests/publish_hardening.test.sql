@@ -60,22 +60,22 @@ select is((select count(*)::int from storage.objects where bucket_id = 'publishe
 -- ---------------------------------------------------------------------------
 select tests.act_as(:'r1');
 select throws_ok($$select public.publish_solicitation('00000000-0000-0000-0000-0000000007c1',
-    null, 'solicitations/x/v1/bid-form.pdf', '{"k":1}', now())$$,
+    null, 'solicitations/x/v1/bid-form.pdf', '{"k":1}', now(), 15000000)$$,
   'P0001', 'invalid_data', 'null rfb path raises invalid_data');
 select throws_ok($$select public.publish_solicitation('00000000-0000-0000-0000-0000000007c1',
-    'solicitations/x/v1/rfb.pdf', '   ', '{"k":1}', now())$$,
+    'solicitations/x/v1/rfb.pdf', '   ', '{"k":1}', now(), 15000000)$$,
   'P0001', 'invalid_data', 'blank bid form path raises invalid_data');
 select throws_ok($$select public.publish_solicitation('00000000-0000-0000-0000-0000000007c1',
-    '', 'solicitations/x/v1/bid-form.pdf', '{"k":1}', now())$$,
+    '', 'solicitations/x/v1/bid-form.pdf', '{"k":1}', now(), 15000000)$$,
   'P0001', 'invalid_data', 'empty rfb path raises invalid_data');
 select throws_ok($$select public.publish_solicitation('00000000-0000-0000-0000-0000000007c1',
-    'solicitations/x/v1/rfb.pdf', 'solicitations/x/v1/bid-form.pdf', null, now())$$,
+    'solicitations/x/v1/rfb.pdf', 'solicitations/x/v1/bid-form.pdf', null, now(), 15000000)$$,
   'P0001', 'invalid_data', 'null snapshot raises invalid_data');
 select throws_ok($$select public.publish_solicitation('00000000-0000-0000-0000-0000000007c1',
-    'solicitations/x/v1/rfb.pdf', 'solicitations/x/v1/bid-form.pdf', '{}', now())$$,
+    'solicitations/x/v1/rfb.pdf', 'solicitations/x/v1/bid-form.pdf', '{}', now(), 15000000)$$,
   'P0001', 'invalid_data', 'empty snapshot raises invalid_data');
 select throws_ok($$select public.publish_solicitation('00000000-0000-0000-0000-0000000007c1',
-    'solicitations/x/v1/rfb.pdf', 'solicitations/x/v1/bid-form.pdf', '{"k":1}', null)$$,
+    'solicitations/x/v1/rfb.pdf', 'solicitations/x/v1/bid-form.pdf', '{"k":1}', null, 15000000)$$,
   'P0001', 'invalid_data', 'null bid_due_at raises invalid_data');
 
 reset role;
@@ -88,7 +88,7 @@ select lives_ok($$select public.publish_solicitation('00000000-0000-0000-0000-00
     'solicitations/00000000-0000-0000-0000-0000000007c1/v1/rfb.pdf',
     'solicitations/00000000-0000-0000-0000-0000000007c1/v1/bid-form.pdf',
     '{"k":1}', tests.bid_due_at((select data from public.solicitations
-                                 where id = '00000000-0000-0000-0000-0000000007c1')))$$,
+                                 where id = '00000000-0000-0000-0000-0000000007c1')), 15000000)$$,
   'a valid publish succeeds');
 
 -- After publish the remaining object can no longer be deleted.

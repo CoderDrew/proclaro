@@ -26,6 +26,23 @@ const rows: [string, DomainStatus, StatusTone, string][] = [
   ["file changed", { kind: "file", status: "changed" }, "danger", "changed since submission"],
   ["file other", { kind: "file", status: "odd" }, "danger", "odd since submission"],
   ["logEntry afterDue", { kind: "logEntry", flag: "afterDue" }, "warning", "after the bid due time"],
+  ["evaluation bid_review", { kind: "evaluation", stage: "bid_review", awaitingAgency: false }, "warning", "Bid review"],
+  ["evaluation awaiting agency", { kind: "evaluation", stage: "bid_review", awaitingAgency: true }, "warning", "Awaiting agency"],
+  ["evaluation recap_check", { kind: "evaluation", stage: "recap_check", awaitingAgency: false }, "warning", "Recap in check"],
+  ["evaluation recap_posted", { kind: "evaluation", stage: "recap_posted", awaitingAgency: false }, "warning", "Award pending"],
+  ["evaluation award_check", { kind: "evaluation", stage: "award_check", awaitingAgency: false }, "warning", "Award in check"],
+  ["evaluation awarded", { kind: "evaluation", stage: "awarded", awaitingAgency: false }, "success", "Awarded"],
+  ["evaluation all_rejected", { kind: "evaluation", stage: "all_rejected", awaitingAgency: false }, "danger", "All bids rejected"],
+  ["evaluation unknown", { kind: "evaluation", stage: "odd_stage", awaitingAgency: false }, "neutral", "odd_stage"],
+  ["evaluation awaiting only applies in bid review", { kind: "evaluation", stage: "awarded", awaitingAgency: true }, "success", "Awarded"],
+  ["review accepted", { kind: "review", status: "accepted" }, "success", "Accepted"],
+  ["review flagged", { kind: "review", status: "flagged" }, "warning", "Flagged for agency"],
+  ["review flag_accepted", { kind: "review", status: "flag_accepted" }, "success", "Accepted by agency"],
+  ["review flag_rejected", { kind: "review", status: "flag_rejected" }, "danger", "Rejected by agency"],
+  ["review non_responsive", { kind: "review", status: "non_responsive" }, "danger", "Non-responsive"],
+  ["review pending_cure", { kind: "review", status: "pending_cure" }, "warning", "Pending cure"],
+  ["review undecided", { kind: "review", status: "undecided" }, "neutral", "Not reviewed"],
+  ["review unknown", { kind: "review", status: "mystery" }, "neutral", "mystery"],
 ];
 
 describe("statusBadge", () => {
@@ -47,5 +64,7 @@ describe("statusBadge", () => {
     const r = statusBadge({ kind: "solicitation", state: "" });
     expect(r.tone).toBe("neutral");
     expect(r.label.length).toBeGreaterThan(0);
+    expect(statusBadge({ kind: "evaluation", stage: " ", awaitingAgency: false }).label).toBe("Unknown");
+    expect(statusBadge({ kind: "review", status: "" }).label).toBe("Unknown");
   });
 });

@@ -1,4 +1,4 @@
-import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, Ref } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "danger" | "link";
 
@@ -6,6 +6,7 @@ export type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type"> 
   type: "button" | "submit";
   variant?: ButtonVariant;
   loading?: boolean;
+  ref?: Ref<HTMLButtonElement>;
   "data-testid"?: string;
 };
 

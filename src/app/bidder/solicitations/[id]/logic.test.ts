@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   assertOwnBidPath, bidButtonState, bidMessageFor, bidUploadPath, parsePriceInputs, runAttachFile, runRemoveFile, runSavePrices,
-  runSetBondChoice, toBidDraft, toReceipts, type FileDeps,
+  runSetApprenticeCommitment, runSetBondChoice, toBidDraft, toReceipts, type FileDeps,
   afterSubmitNotice, denialFrom, describeReceipt, parseBiddingState, replaceConfirmation, replaceConfirmationFor, runSubmitBid, withdrawConfirmation,
-  type SubmitBidDeps,
+  type SubmitBidDeps, cureMessageFor, cureStatusText, parseCureStatus, runSubmitCureBond,
 } from "./logic";
 import type { BidDraft } from "@/domain/bid/types";
 import type { SolicitationData } from "@/domain/solicitation/types";
@@ -205,16 +205,38 @@ describe("runSetBondChoice", () => {
   });
 });
 
+describe("runSetApprenticeCommitment", () => {
+  it("passes the answer to the draft update", async () => {
+    const updates: unknown[] = [];
+    const r = await runSetApprenticeCommitment(BID, true, { update: async (b, patch) => { updates.push([b, patch]); } });
+    expect(r).toEqual({ ok: true });
+    expect(updates).toEqual([[BID, { apprentice_commitment: true }]]);
+  });
+  it("clears the answer with null", async () => {
+    const updates: unknown[] = [];
+    await runSetApprenticeCommitment(BID, null, { update: async (_b, patch) => { updates.push(patch); } });
+    expect(updates).toEqual([{ apprentice_commitment: null }]);
+  });
+  it("rejects a non-uuid bid id and a non-boolean answer without writing", async () => {
+    const updates: unknown[] = [];
+    const deps = { update: async (_b: string, patch: unknown) => { updates.push(patch); } };
+    await expect(runSetApprenticeCommitment("not-a-uuid", true, deps)).rejects.toThrow("not_found");
+    await expect(runSetApprenticeCommitment(BID, "yes" as never, deps)).rejects.toThrow("invalid_bid");
+    expect(updates).toEqual([]);
+  });
+});
+
 describe("data mapping", () => {
   it("builds a BidDraft with cents and a version, keeping nulls", () => {
     const d = toBidDraft(
       { id: BID, reference: "K7QM-2XV0" },
-      { version: 2, item_cents: [100, null] as unknown as number[], alternate_cents: [], bid_bond_choice: "paper" },
+      { version: 2, item_cents: [100, null] as unknown as number[], alternate_cents: [], bid_bond_choice: "paper",
+        apprentice_commitment: true },
       [{ slot: "insurance", path: "p", file_name: "ins.pdf" }],
     );
     expect(d).toEqual({
       bidId: BID, reference: "K7QM-2XV0", version: 2, itemCents: [100, null], alternateCents: [],
-      bidBondChoice: "paper", files: [{ slot: "insurance", path: "p", fileName: "ins.pdf" }],
+      bidBondChoice: "paper", apprenticeCommitment: true, files: [{ slot: "insurance", path: "p", fileName: "ins.pdf" }],
     });
   });
   it("types withdrawn_at as string | null (the generated type says string)", () => {
@@ -271,7 +293,7 @@ const DATA = {
   schedule: { items: [{ name: "Base", description: "" }, { name: "Two", description: "" }], alternates: [] },
 } as unknown as SolicitationData;
 const DRAFT: BidDraft = {
-  bidId: BID, reference: "K7QM-2XV0", version: 1, itemCents: [100, 200], alternateCents: [], bidBondChoice: "paper",
+  bidId: BID, reference: "K7QM-2XV0", version: 1, itemCents: [100, 200], alternateCents: [], bidBondChoice: "paper", apprenticeCommitment: null,
   files: [{ slot: "insurance", path: "p1", fileName: "i.pdf" }, { slot: "references", path: "p2", fileName: "r.pdf" }],
 };
 const RECEIPT = { reference: "K7QM-2XV0", version: 1, submittedAt: "2026-11-20T17:00:00Z", withdrawnAt: null, isCurrent: true };
@@ -346,7 +368,10 @@ describe("receipt wording", () => {
 });
 
 describe("bidButtonState", () => {
-  const base = { readOnly: false, dirty: false, saving: false, allAmountsEntered: true, hasItems: true, issueCount: 0 };
+  const base = {
+    readOnly: false, dirty: false, saving: false, allAmountsEntered: true, hasItems: true, issueCount: 0,
+    bondChoiceMissing: false, apprenticeAnswerMissing: false,
+  };
   it("enables both when everything is entered and saved", () => {
     expect(bidButtonState(base)).toEqual({ canPrintForSignature: true, canSubmit: true });
   });
@@ -365,5 +390,53 @@ describe("bidButtonState", () => {
   });
   it("needs at least one item", () => {
     expect(bidButtonState({ ...base, hasItems: false }).canPrintForSignature).toBe(false);
+  });
+  // Ruling 6: the signed original must match what will be sealed.
+  it("needs the bond choice to print when bonds are required", () => {
+    expect(bidButtonState({ ...base, bondChoiceMissing: true, issueCount: 1 }))
+      .toEqual({ canPrintForSignature: false, canSubmit: false });
+  });
+  it("needs the apprentice answer to print on a $1M+ solicitation", () => {
+    expect(bidButtonState({ ...base, apprenticeAnswerMissing: true, issueCount: 1 }))
+      .toEqual({ canPrintForSignature: false, canSubmit: false });
+  });
+});
+
+describe("cure", () => {
+  it("parses the database status, failing safe to not_required", () => {
+    expect(parseCureStatus("pending")).toBe("pending");
+    expect(parseCureStatus("cured")).toBe("cured");
+    expect(parseCureStatus("failed")).toBe("failed");
+    expect(parseCureStatus("ok")).toBe("ok");
+    expect(parseCureStatus("bogus")).toBe("not_required");
+    expect(parseCureStatus(null)).toBe("not_required");
+  });
+  it("words each status", () => {
+    expect(cureStatusText("pending", "Dec 7, 2026 5:00 PM")).toBe(
+      "Your bid bond was not received. Upload it by Dec 7, 2026 5:00 PM or the bid will be disqualified.");
+    expect(cureStatusText("cured", "x")).toBe("Bid bond received during the cure period.");
+    expect(cureStatusText("failed", "x")).toBe("Bid bond not received by the cure deadline. The bid is non-responsive.");
+    expect(cureStatusText("ok", "x")).toBeNull();
+    expect(cureStatusText("not_required", "x")).toBeNull();
+  });
+  it("maps the cure error codes", () => {
+    expect(cureMessageFor(new Error("cure_closed"))).toBe("The cure deadline has passed.");
+    expect(cureMessageFor(new Error("invalid_state"))).toBe("This bid has no bond to cure.");
+    expect(cureMessageFor(new Error("not_found"))).toBe("That bid or solicitation was not found.");
+    expect(cureMessageFor(new Error("invalid_bid"))).toBe("That upload was not accepted. Try again.");
+    expect(cureMessageFor(new Error("invalid_data"))).toBe("That upload was not accepted. Try again.");
+    expect(cureMessageFor(new Error("weird"))).toBe("Something went wrong. Try again.");
+  });
+  it("submits only a path under the caller's own bid", async () => {
+    const submit = vi.fn(async () => "2026-12-07T23:00:00Z");
+    await expect(runSubmitCureBond(BID, `bids/${BID}/${UPLOAD}/bond.pdf`, "bond.pdf", { submit }))
+      .resolves.toEqual({ ok: true, uploadedAt: "2026-12-07T23:00:00Z" });
+    expect(submit).toHaveBeenCalledWith(BID, `bids/${BID}/${UPLOAD}/bond.pdf`, "bond.pdf");
+    const other = "7d1c8a52-0000-4000-8000-000000000002";
+    await expect(runSubmitCureBond(BID, `bids/${other}/${UPLOAD}/bond.pdf`, "bond.pdf", { submit }))
+      .rejects.toThrow("invalid_upload_path");
+    await expect(runSubmitCureBond(BID, `bids/${BID}/../x/bond.pdf`, "bond.pdf", { submit }))
+      .rejects.toThrow("invalid_upload_path");
+    expect(submit).toHaveBeenCalledTimes(1);
   });
 });

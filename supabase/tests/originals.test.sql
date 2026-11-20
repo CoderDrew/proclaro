@@ -345,9 +345,9 @@ select is(app.original_received(:'bid2', 2, now() + interval '1 day'), false, 'i
 -- Straddling log (final review I1): the bid row lock and the clock_timestamp() stamp.
 -- ---------------------------------------------------------------------------
 select ok(
-  (select p.prosrc ~ 'for update of b;.*v_logged\s*:= clock_timestamp\(\);.*logged_at\)'
+  (select p.prosrc ~ 'for no key update of b;.*v_logged\s*:= clock_timestamp\(\);.*logged_at\)'
      from pg_proc p where p.oid = 'public.log_bid_original(uuid, text, int, public.original_item, timestamptz)'::regprocedure),
-  'log_bid_original locks the bid row FOR UPDATE, then stamps logged_at with clock_timestamp() and writes it');
+  'log_bid_original locks the bid row (FOR NO KEY UPDATE since 0025), then stamps logged_at with clock_timestamp() and writes it');
 select ok(
   (select p.prosrc ~ 'p_received_at > clock_timestamp\(\)'
      from pg_proc p where p.oid = 'public.log_bid_original(uuid, text, int, public.original_item, timestamptz)'::regprocedure),

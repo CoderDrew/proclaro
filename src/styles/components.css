@@ -136,6 +136,11 @@ a.ui-button--danger:hover {
 .ui-choice input {
   margin: 0;
 }
+/* A disabled choice's label reads as disabled too, not just its radio or checkbox. */
+.ui-choice:has(input:disabled) {
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
 .ui-money-input {
   display: inline-flex;
   align-items: center;
@@ -566,4 +571,8 @@ a.ui-button--danger:hover {
 }
 .ui-form .ui-field select {
   max-width: 100%;
+}
+.ui-confirm {
+  display: grid;
+  gap: var(--space-2);
 }

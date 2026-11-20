@@ -111,7 +111,7 @@ select tests.act_as(:'r1');
 select lives_ok($$select public.publish_solicitation('00000000-0000-0000-0000-0000000008c1',
     'solicitations/00000000-0000-0000-0000-0000000008c1/v1/rfb.pdf',
     'solicitations/00000000-0000-0000-0000-0000000008c1/v1/bid-form.pdf',
-    '{"k":1}', tests.bid_due_at((select data from public.solicitations where id = '00000000-0000-0000-0000-0000000008c1')))$$,
+    '{"k":1}', tests.bid_due_at((select data from public.solicitations where id = '00000000-0000-0000-0000-0000000008c1')), 15000000)$$,
   'publish after reopen succeeds');
 
 reset role;
@@ -201,7 +201,7 @@ select lives_ok($$select public.approve_check('00000000-0000-0000-0000-000000000
 -- submit_solicitation: required top-level keys
 -- ===========================================================================
 reset role;
-select is(cardinality(app.required_data_keys()), 32, 'required key list has every schema key');
+select is(cardinality(app.required_data_keys()), 33, 'required key list has every schema key');
 
 select tests.act_as(:'author');
 select throws_ok($$select public.submit_solicitation('00000000-0000-0000-0000-0000000008c5')$$,
@@ -264,28 +264,28 @@ select throws_ok(
 select tests.act_as(:'r1');
 select throws_ok(format($$select public.publish_solicitation('00000000-0000-0000-0000-0000000008c6',
     'solicitations/00000000-0000-0000-0000-0000000008c1/v1/rfb.pdf',
-    'solicitations/00000000-0000-0000-0000-0000000008c6/v1/bid-form.pdf', '{"k":1}', %L)$$, :'due_c6'),
+    'solicitations/00000000-0000-0000-0000-0000000008c6/v1/bid-form.pdf', '{"k":1}', %L, 15000000)$$, :'due_c6'),
   'P0001', 'invalid_paths', 'publish refuses another solicitation''s rfb path');
 select throws_ok(format($$select public.publish_solicitation('00000000-0000-0000-0000-0000000008c6',
     'solicitations/00000000-0000-0000-0000-0000000008c6/v1/rfb.pdf',
-    'solicitations/00000000-0000-0000-0000-0000000008c6/v2/bid-form.pdf', '{"k":1}', %L)$$, :'due_c6'),
+    'solicitations/00000000-0000-0000-0000-0000000008c6/v2/bid-form.pdf', '{"k":1}', %L, 15000000)$$, :'due_c6'),
   'P0001', 'invalid_paths', 'publish refuses a different bid form path');
 select throws_ok(format($$select public.publish_solicitation('00000000-0000-0000-0000-0000000008c6',
     'solicitations/00000000-0000-0000-0000-0000000008c6/v1/../v1/rfb.pdf',
-    'solicitations/00000000-0000-0000-0000-0000000008c6/v1/bid-form.pdf', '{"k":1}', %L)$$, :'due_c6'),
+    'solicitations/00000000-0000-0000-0000-0000000008c6/v1/bid-form.pdf', '{"k":1}', %L, 15000000)$$, :'due_c6'),
   'P0001', 'invalid_paths', 'publish refuses a non-canonical rfb path');
 select throws_ok(format($$select public.publish_solicitation('00000000-0000-0000-0000-0000000008c6',
     'solicitations/00000000-0000-0000-0000-0000000008c6/v1/rfb.pdf',
-    'solicitations/00000000-0000-0000-0000-0000000008c6/v1/bid-form.pdf', '{"k":1}', %L)$$,
+    'solicitations/00000000-0000-0000-0000-0000000008c6/v1/bid-form.pdf', '{"k":1}', %L, 15000000)$$,
     (:'due_c6'::timestamptz + interval '1 hour')::text),
   'P0001', 'bid_due_mismatch', 'publish refuses a bid_due_at that differs from the data');
 select throws_ok($$select public.publish_solicitation('00000000-0000-0000-0000-0000000008c6',
     'solicitations/00000000-0000-0000-0000-0000000008c6/v1/rfb.pdf',
-    'solicitations/00000000-0000-0000-0000-0000000008c6/v1/bid-form.pdf', '{"k":1}', null)$$,
+    'solicitations/00000000-0000-0000-0000-0000000008c6/v1/bid-form.pdf', '{"k":1}', null, 15000000)$$,
   'P0001', 'invalid_data', 'the 0004 null guard still applies');
 select throws_ok($$select public.publish_solicitation('00000000-0000-0000-0000-0000000008c7',
     'solicitations/00000000-0000-0000-0000-0000000008c7/v1/rfb.pdf',
-    'solicitations/00000000-0000-0000-0000-0000000008c7/v1/bid-form.pdf', '{"k":1}', now())$$,
+    'solicitations/00000000-0000-0000-0000-0000000008c7/v1/bid-form.pdf', '{"k":1}', now(), 15000000)$$,
   'P0001', 'invalid_data', 'publish refuses data without a bid due date');
 
 reset role;
@@ -299,7 +299,7 @@ select is(:'due_c6'::timestamptz,
 select tests.act_as(:'r1');
 select lives_ok(format($$select public.publish_solicitation('00000000-0000-0000-0000-0000000008c6',
     'solicitations/00000000-0000-0000-0000-0000000008c6/v1/rfb.pdf',
-    'solicitations/00000000-0000-0000-0000-0000000008c6/v1/bid-form.pdf', '{"k":1}', %L)$$, :'due_c6'),
+    'solicitations/00000000-0000-0000-0000-0000000008c6/v1/bid-form.pdf', '{"k":1}', %L, 15000000)$$, :'due_c6'),
   'publish with pinned paths and the matching bid due succeeds');
 reset role;
 select is((select bid_due_at from public.solicitations where id = '00000000-0000-0000-0000-0000000008c6'),

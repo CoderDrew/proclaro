@@ -18,7 +18,11 @@ export interface SolicitationData {
   summary: string; projectDescription: string; scopeNotes: string; specialProvisions: string;
   location: { address: string; city: string; county: string };
   requester: Contact; projectManager: Contact;
-  estimateCents: Cents | null; fundingSource: FundingSource | null; fundingOther: string; federalFunds: boolean | null;
+  estimateCents: Cents | null;
+  /** The most the agency can spend. Confidential until the recap is posted (Ruling 2): frozen at publish into
+   *  solicitation_funding and never in the public data or snapshot. */
+  fundingAmountCents: Cents | null;
+  fundingSource: FundingSource | null; fundingOther: string; federalFunds: boolean | null;
   releaseDate: LocalDate | null; adStart: LocalDate | null; adEnd: LocalDate | null; newspapers: string;
   questionsDue: { date: LocalDate; time: LocalTime } | null;
   answersDue: { date: LocalDate; time: LocalTime } | null;

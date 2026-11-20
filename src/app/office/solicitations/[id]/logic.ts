@@ -42,6 +42,7 @@ const MESSAGES: Record<string, string> = {
   invalid_stored_data: INVALID_STORED_DATA,
   invalid_paths: "The published files are not where this solicitation expects them. Try publishing again.",
   bid_due_mismatch: "The bid due time could not be confirmed. Reload the page and try again.",
+  snapshot_mismatch: "The funding amount changed while publishing. Reload the page and try again.",
 };
 
 /** Maps a thrown database/guard error to a user message. Unknown errors get a generic message. */

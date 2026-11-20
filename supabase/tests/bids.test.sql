@@ -206,7 +206,7 @@ reset role;
 select tests.act_as(:'bidder_a');
 update public.bid_drafts set bid_bond_choice = 'electronic' where bid_id = :'bid_a';
 reset role;
-select is(app.bid_draft_problems(:'bid_a'), array['upload_missing'], 'electronic without a bid_bond file gives upload_missing');
+select is(app.bid_draft_problems(:'bid_a'), array[]::text[], 'electronic without a bid_bond file gives no problem (curable after submit, 0017)');
 select tests.act_as(:'bidder_a');
 update public.bid_drafts set bid_bond_choice = 'paper' where bid_id = :'bid_a';
 insert into public.bid_draft_files (bid_id, slot, path, file_name)

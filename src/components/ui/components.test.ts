@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { Button, Card, Choice, DateTime, EmptyState, Field, FieldGrid, Money, MoneyInput, Notice, Page, PageHeader, StatusBadge, Table, Td, Th } from "./index";
+import { Button, Card, Choice, ConfirmAction, DateTime, EmptyState, Field, FieldGrid, Money, MoneyInput, Notice, Page, PageHeader, StatusBadge, Table, Td, Th } from "./index";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
 
@@ -136,5 +136,26 @@ describe("Money", () => {
     const out = html(createElement(Money, { cents: 12_734_567 }));
     expect(out).toContain("$127,345.67");
     expect(out).toContain("tabular");
+  });
+});
+
+describe("ConfirmAction", () => {
+  it("starts as a plain button (type=button) that does not submit, with no confirm step", () => {
+    const out = html(createElement(ConfirmAction, {
+      label: "Post award", confirmLabel: "Confirm: post award publicly", warning: "Cannot be undone.",
+      describedBy: "why", "data-testid": "post",
+    }));
+    expect(out).toContain('type="button"');
+    expect(out).not.toContain('type="submit"');
+    expect(out).toContain('aria-describedby="why"');
+    expect(out).toContain("Post award");
+    expect(out).not.toContain("Confirm: post award publicly");
+    expect(out).not.toContain("Cannot be undone.");
+  });
+  it("disabled keeps the disabled look on the first button", () => {
+    const out = html(createElement(ConfirmAction, {
+      label: "Post award", confirmLabel: "Confirm", warning: "W", disabled: true,
+    }));
+    expect(out).toContain('disabled=""');
   });
 });

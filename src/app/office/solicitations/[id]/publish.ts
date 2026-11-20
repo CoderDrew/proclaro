@@ -48,6 +48,8 @@ export interface PublishDeps {
   /** Calls publish_solicitation as the signed-in user; throws Error(<database error code>) on failure. */
   publishRpc(args: {
     p_id: string; p_rfb_path: string; p_bid_form_path: string; p_snapshot: unknown; p_bid_due_at: string;
+    /** Sent on its own: the snapshot is public and the funding amount is confidential (Ruling 2). */
+    p_funding_cents: number;
   }): Promise<void>;
 }
 
@@ -70,7 +72,8 @@ export async function publishSolicitation(id: string, d: PublishDeps): Promise<P
     const passed = releasePassed(data, tz, d.now());
     if (passed) errors.unshift(passed);
     if (errors.length > 0) return fail("Fix every problem before publishing.", errors);
-    if (data.bidDueDate === null) return fail(messageFor(new Error("invalid_data")));
+    if (data.bidDueDate === null || data.fundingAmountCents === null) return fail(messageFor(new Error("invalid_data")));
+    const fundingCents = data.fundingAmountCents;
     const bidDueAt = toUtc(data.bidDueDate, data.bidDueTime, tz);
 
     const ctx = await d.loadDocContext(id);
@@ -102,8 +105,11 @@ export async function publishSolicitation(id: string, d: PublishDeps): Promise<P
       attachments.push({ ...a, storagePath: to });
     }
 
+    // The snapshot is publicly readable, so the confidential funding amount stays out of it (Ruling 2).
+    const { fundingAmountCents: _confidential, ...publicData } = ctx.data;
+    void _confidential;
     const snapshot = {
-      data: { ...ctx.data, attachments },
+      data: { ...publicData, attachments },
       clauses: ctx.clauses,
       settings: ctx.settings,
       renderedAt: d.now().toISOString(),
@@ -111,6 +117,7 @@ export async function publishSolicitation(id: string, d: PublishDeps): Promise<P
     await d.publishRpc({
       p_id: id, p_rfb_path: rfbPath, p_bid_form_path: bidFormPath,
       p_snapshot: JSON.parse(JSON.stringify(snapshot)), p_bid_due_at: bidDueAt.toISOString(),
+      p_funding_cents: fundingCents,
     });
     return { ok: true, number: ctx.number };
   } catch (e) {

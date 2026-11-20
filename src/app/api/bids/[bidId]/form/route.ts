@@ -6,6 +6,7 @@ import { loadPublishedDocContext } from "@/documents/loadPublishedDocContext";
 import { chromiumRenderer, renderPdf } from "@/documents/pdf";
 import { renderBidFormHtml } from "@/documents/renderHtml";
 import { toBidDraft } from "@/app/bidder/solicitations/[id]/logic";
+import { deriveRequirements } from "@/domain/solicitation/valueBands";
 
 export const runtime = "nodejs";
 
@@ -30,7 +31,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   if (!bid.data) return notFound();
 
   const [draft, files, company, org] = await Promise.all([
-    supabase.from("bid_drafts").select("version, item_cents, alternate_cents, bid_bond_choice").eq("bid_id", bid.data.id).maybeSingle(),
+    supabase.from("bid_drafts").select("version, item_cents, alternate_cents, bid_bond_choice, apprentice_commitment").eq("bid_id", bid.data.id).maybeSingle(),
     supabase.from("bid_draft_files").select("slot, path, file_name").eq("bid_id", bid.data.id),
     supabase.from("bidder_companies").select("*").eq("org_id", bid.data.bidder_org_id).maybeSingle(),
     supabase.from("organizations").select("name").eq("id", bid.data.bidder_org_id).maybeSingle(),
@@ -51,6 +52,15 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     if (fill.itemCents.length !== ctx.data.schedule.items.length || fill.alternateCents.length !== ctx.data.schedule.alternates.length) {
       return NextResponse.json(
         { error: "Enter every price before printing the bid form." },
+        { status: 409, headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
+    // Ruling 6: the signed original must match what will be sealed, so the bond choice (bonds required) and the
+    // apprentice answer ($1M+) must be saved before the form prints.
+    const req = deriveRequirements(ctx.data.estimateCents ?? 0, false, ctx.data.optionalSections);
+    if ((req.bonds && draft.data.bid_bond_choice === null) || (req.apprenticeCredit && draft.data.apprentice_commitment === null)) {
+      return NextResponse.json(
+        { error: "Choose how the bid bond is provided and answer every required question before printing the bid form." },
         { status: 409, headers: { "Cache-Control": "private, no-store" } },
       );
     }

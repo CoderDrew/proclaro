@@ -74,7 +74,7 @@ describe.skipIf(!hasChromium)("[slow] chromium PDF rendering", () => {
     const fill = {
       legalName: "Ridge Builders", address: "1 Elm St", contact: "Ana Ridge, 555-0142, ana@example.test",
       residentClaimed: false, residentCertificate: null, reference: "K7QM-2XVD", bidVersion: 2,
-      itemCents: [12_500_000, 234_567], alternateCents: [], bidBond: "paper" as const,
+      itemCents: [12_500_000, 234_567], alternateCents: [], bidBond: "paper" as const, apprenticeCommitment: null,
     };
     const pages = await pdfPages(await renderPdf(renderBidFormHtml(ctx, { draft: false, fill }), chromiumRenderer()));
     const total = pages.length;

@@ -109,8 +109,11 @@ export function BidFormPages({ ctx, req, footer, id, fill }: {
           </p>
         ) : null}
         {req.apprenticeCredit ? (
-          <p data-apprentice-question>
-            Does your firm take part in an approved apprenticeship program? Yes {blank} No {blank}
+          <p data-apprentice-line>
+            The bidder commits apprentices to at least 10% of the labor hours on this project:{" "}
+            {fill
+              ? (fill.apprenticeCommitment === true ? "Yes" : fill.apprenticeCommitment === false ? "No" : blank)
+              : <>Yes {blank} No {blank}</>}
           </p>
         ) : null}
       </Page>

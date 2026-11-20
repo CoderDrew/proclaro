@@ -61,7 +61,7 @@ select lives_ok(
       'solicitations/00000000-0000-0000-0000-0000000006c1/v1/rfb.pdf',
       'solicitations/00000000-0000-0000-0000-0000000006c1/v1/bid-form.pdf',
       '{"text":"snapshot"}'::jsonb,
-      tests.bid_due_at((select data from public.solicitations where id = '00000000-0000-0000-0000-0000000006c1')))$$,
+      tests.bid_due_at((select data from public.solicitations where id = '00000000-0000-0000-0000-0000000006c1')), 15000000)$$,
   'reviewer publishes');
 
 reset role;
@@ -111,7 +111,7 @@ select throws_ok($$select public.send_to_check('00000000-0000-0000-0000-00000000
 select throws_ok($$select public.approve_alone('00000000-0000-0000-0000-0000000006c1')$$,
   'P0001', 'invalid_state', 'published: approve_alone raises invalid_state');
 select throws_ok(
-  $$select public.publish_solicitation('00000000-0000-0000-0000-0000000006c1', 'a', 'b', '{}', now())$$,
+  $$select public.publish_solicitation('00000000-0000-0000-0000-0000000006c1', 'a', 'b', '{}', now(), 15000000)$$,
   'P0001', 'invalid_state', 'published: publish_solicitation raises invalid_state');
 
 select tests.act_as(:'r2');

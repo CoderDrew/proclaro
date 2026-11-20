@@ -31,3 +31,21 @@ export interface PublicFilterable<Q> {
 export function onlyPublic<Q extends PublicFilterable<Q>>(query: Q, today: string): Q {
   return query.eq("state", "published").lte("release_date", today);
 }
+
+/**
+ * A bidder's posted outcome, worded for display; an unknown value is returned as it is. Under the posted "all bids
+ * rejected" memo an accepted bid was rejected too, so it is never shown as accepted.
+ */
+export function postedOutcomeLabel(status: string, allRejected = false): string {
+  switch (status) {
+    case "accepted":
+    case "flag_accepted":
+      return allRejected ? "All bids rejected" : "Accepted";
+    case "non_responsive":
+      return "Non-responsive";
+    case "flag_rejected":
+      return "Rejected by the agency";
+    default:
+      return status;
+  }
+}

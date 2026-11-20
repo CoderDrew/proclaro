@@ -5,9 +5,9 @@ import { emptySolicitation, parseStoredData, solicitationSchema } from "./schema
 
 /** The key list submit_solicitation checks, read from the migration between its marker comments. */
 function migrationKeys(): string[] {
-  const sql = readFileSync(join(process.cwd(), "supabase/migrations/0006_final_review.sql"), "utf8");
+  const sql = readFileSync(join(process.cwd(), "supabase/migrations/0014_funding_amount.sql"), "utf8");
   const block = /required-data-keys:start([\s\S]*?)-- required-data-keys:end/.exec(sql);
-  if (!block) throw new Error("marker comments not found in 0006_final_review.sql");
+  if (!block) throw new Error("marker comments not found in 0014_funding_amount.sql");
   return [...block[1].matchAll(/'([A-Za-z]+)'/g)].map((m) => m[1]);
 }
 

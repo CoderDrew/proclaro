@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bidStatus, formatInstant, onlyPublic } from "./status";
+import { bidStatus, formatInstant, onlyPublic, postedOutcomeLabel } from "./status";
 
 describe("bidStatus", () => {
   const due = "2026-08-31T19:00:00Z";
@@ -31,5 +31,23 @@ describe("onlyPublic", () => {
     };
     expect(onlyPublic(q, "2026-11-17")).toBe(q);
     expect(calls).toEqual([["eq", "state", "published"], ["lte", "release_date", "2026-11-17"]]);
+  });
+});
+
+describe("postedOutcomeLabel", () => {
+  it("maps the posted statuses", () => {
+    expect(postedOutcomeLabel("accepted")).toBe("Accepted");
+    expect(postedOutcomeLabel("flag_accepted")).toBe("Accepted");
+    expect(postedOutcomeLabel("non_responsive")).toBe("Non-responsive");
+    expect(postedOutcomeLabel("flag_rejected")).toBe("Rejected by the agency");
+  });
+  it("returns an unknown value as it is", () => {
+    expect(postedOutcomeLabel("something_else")).toBe("something_else");
+  });
+  it("never says Accepted under the all-rejected memo", () => {
+    expect(postedOutcomeLabel("accepted", true)).toBe("All bids rejected");
+    expect(postedOutcomeLabel("flag_accepted", true)).toBe("All bids rejected");
+    expect(postedOutcomeLabel("non_responsive", true)).toBe("Non-responsive");
+    expect(postedOutcomeLabel("flag_rejected", true)).toBe("Rejected by the agency");
   });
 });

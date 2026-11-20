@@ -48,11 +48,28 @@ export interface TabulationRow {
   fileFlags: string[];
 }
 
-/** The bid bond as the bidder chose it. Display only in 2a: it never makes a bid non-responsive. */
-export function bondLabel(choice: BondChoice | null, paperReceived: boolean | null): string {
-  if (choice === "electronic") return "Electronic bond (uploaded)";
+/**
+ * The bid bond as the bidder chose it. Display only: the cure status, not this label, decides responsiveness.
+ * An electronic bond may be submitted without its file (Ruling 7), so "uploaded" needs a sealed bid_bond file.
+ */
+export function bondLabel(choice: BondChoice | null, paperReceived: boolean | null, bondFileUploaded: boolean): string {
+  if (choice === "electronic") return bondFileUploaded ? "Electronic bond (uploaded)" : "Electronic bond (not uploaded)";
   if (choice === "paper") return `Paper original mailed: ${paperReceived ? "received" : "not received"}`;
   return "Not required";
+}
+
+const CURE_NOTES: Record<string, string> = {
+  pending: "cure pending",
+  cured: "cured after close",
+  failed: "not received by the cure deadline",
+};
+
+/**
+ * The bond label plus its cure status (from public.review_bids), so a bond cured after close does not read as
+ * missing. The label alone reflects only what was sealed at submission.
+ */
+export function bondWithCure(label: string, cureStatus: string | undefined): string {
+  return cureStatus && Object.hasOwn(CURE_NOTES, cureStatus) ? `${label}; ${CURE_NOTES[cureStatus]}` : label;
 }
 
 export function alternateHeader(index: number, kind: "additive" | "deductive"): string {
@@ -63,6 +80,8 @@ export function toTabulation(
   rows: OpenedBid[],
   alternates: SolicitationData["schedule"]["alternates"],
   files: OpenedFile[] = [],
+  /** bid_id -> app.bond_cure status (pending, cured, failed, ok, not_required). */
+  cures: Record<string, string> = {},
 ): { headers: string[]; rows: TabulationRow[] } {
   return {
     headers: alternates.map((a, i) => alternateHeader(i, a.kind)),
@@ -75,7 +94,8 @@ export function toTabulation(
       alternates: r.alternate_cents.map(formatMoney),
       originalReceived: r.original_received,
       reason: r.non_responsive_reason,
-      bond: bondLabel(r.bid_bond_choice, r.bond_original_received),
+      bond: bondWithCure(bondLabel(r.bid_bond_choice, r.bond_original_received,
+        files.some((f) => f.bid_id === r.bid_id && f.slot === "bid_bond")), cures[r.bid_id]),
       fileFlags: files
         .filter((f) => f.bid_id === r.bid_id && f.file_status !== "ok")
         .map((f) => `${UPLOAD_SLOT_LABELS[f.slot] ?? f.slot}: ${f.file_status}`),

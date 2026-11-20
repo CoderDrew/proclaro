@@ -14,7 +14,7 @@ function validData(): SolicitationData {
     summary: "Replace roof membranes", projectDescription: "Replace the roof on the main hall.",
     location: { address: "1 Example Way", city: "Calderton", county: "Calder" },
     requester: contact("requester"), projectManager: contact("pm"),
-    estimateCents: 16_000_000, fundingSource: "capital_construction", federalFunds: false,
+    estimateCents: 16_000_000, fundingAmountCents: 16_000_000, fundingSource: "capital_construction", federalFunds: false,
     releaseDate: "2026-08-03", adStart: "2026-08-03", adEnd: "2026-08-17", newspapers: "Calder Daily",
     questionsDue: { date: "2026-08-17", time: "13:00" },
     answersDue: { date: "2026-08-24", time: "13:00" },
@@ -119,6 +119,17 @@ describe("validate", () => {
     expectError({ backgroundCheck: { required: true, contact: "", leadDays: null } }, "required", "backgroundCheck.contact");
     expectError({ backgroundCheck: { required: true, contact: "x", leadDays: null } }, "required", "backgroundCheck.leadDays");
     expectNoIssue({ scopeNotes: "", specialProvisions: "", tentativeAwardDate: null });
+  });
+  it("funding amount is required", () => {
+    expectError({ fundingAmountCents: null }, "required", "fundingAmountCents");
+  });
+  it("funding below the estimate is a warning (boundary)", () => {
+    const r = run({ estimateCents: 15_000_000, fundingAmountCents: 14_999_999 });
+    expect(r.errors).toEqual([]);
+    expect(r.warnings).toEqual([
+      { code: "funding_below_estimate", field: "fundingAmountCents", message: "Funding amount is below the estimate." },
+    ]);
+    expectNoIssue({ estimateCents: 15_000_000, fundingAmountCents: 15_000_000 });
   });
   it("reports at most one required issue per field and tolerates empty data", () => {
     const r = validate(emptySolicitation(), ctx);

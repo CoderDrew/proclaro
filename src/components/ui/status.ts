@@ -7,7 +7,9 @@ export type DomainStatus =
   | { kind: "original"; received: boolean }
   | { kind: "files"; flags: string[] }
   | { kind: "file"; status: string }
-  | { kind: "logEntry"; flag: "afterDue" };
+  | { kind: "logEntry"; flag: "afterDue" }
+  | { kind: "evaluation"; stage: string; awaitingAgency: boolean }
+  | { kind: "review"; status: string };
 
 type Badge = { tone: StatusTone; label: string };
 
@@ -18,6 +20,25 @@ const SOLICITATION: Record<string, Badge> = {
   in_check: { tone: "warning", label: "In check" },
   approved: { tone: "success", label: "Approved" },
   published: { tone: "success", label: "Published" },
+};
+
+const EVALUATION: Record<string, Badge> = {
+  bid_review: { tone: "warning", label: "Bid review" },
+  recap_check: { tone: "warning", label: "Recap in check" },
+  recap_posted: { tone: "warning", label: "Award pending" },
+  award_check: { tone: "warning", label: "Award in check" },
+  awarded: { tone: "success", label: "Awarded" },
+  all_rejected: { tone: "danger", label: "All bids rejected" },
+};
+
+const REVIEW: Record<string, Badge> = {
+  accepted: { tone: "success", label: "Accepted" },
+  flagged: { tone: "warning", label: "Flagged for agency" },
+  flag_accepted: { tone: "success", label: "Accepted by agency" },
+  flag_rejected: { tone: "danger", label: "Rejected by agency" },
+  non_responsive: { tone: "danger", label: "Non-responsive" },
+  pending_cure: { tone: "warning", label: "Pending cure" },
+  undecided: { tone: "neutral", label: "Not reviewed" },
 };
 
 const BID_VERSION: Record<string, StatusTone> = {
@@ -60,6 +81,11 @@ export function statusBadge(s: DomainStatus): Badge {
         : { tone: "danger", label: `${readable(s.status)} since submission` };
     case "logEntry":
       return { tone: "warning", label: "after the bid due time" };
+    case "evaluation":
+      if (s.stage === "bid_review" && s.awaitingAgency) return { tone: "warning", label: "Awaiting agency" };
+      return Object.hasOwn(EVALUATION, s.stage) ? EVALUATION[s.stage] : { tone: "neutral", label: readable(s.stage) };
+    case "review":
+      return Object.hasOwn(REVIEW, s.status) ? REVIEW[s.status] : { tone: "neutral", label: readable(s.status) };
     default:
       return { tone: "neutral", label: "Unknown" };
   }

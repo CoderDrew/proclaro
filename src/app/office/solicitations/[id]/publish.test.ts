@@ -204,6 +204,17 @@ describe("publishSolicitation", () => {
     expect(a.p_snapshot.renderedAt).toBe(NOW.toISOString());
   });
 
+  it("keeps the funding amount out of the public snapshot and sends it separately (Ruling 2)", async () => {
+    const t = makeDeps({ data: validData({ fundingAmountCents: 31_000_000 }) });
+    const r = await publishSolicitation(ID, t.deps);
+    expect(r.ok).toBe(true);
+    const a = t.rpc.mock.calls[0][0] as Record<string, unknown> & { p_snapshot: { data: Record<string, unknown> } };
+    expect(a.p_funding_cents).toBe(31_000_000);
+    expect("fundingAmountCents" in a.p_snapshot.data).toBe(false);
+    expect(JSON.stringify(a.p_snapshot)).not.toContain("fundingAmountCents");
+    expect(JSON.stringify(a.p_snapshot)).not.toContain("31000000");
+  });
+
   it("deletes every upload, including copied attachments, when publish_solicitation fails", async () => {
     const t = makeDeps({ rpcError: new Error("invalid_state") });
     const r = await publishSolicitation(ID, t.deps);

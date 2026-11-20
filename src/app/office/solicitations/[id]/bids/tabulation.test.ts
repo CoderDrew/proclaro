@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bondLabel, toTabulation, type OpenedBid, type OpenedFile } from "./tabulation";
+import { bondLabel, bondWithCure, toTabulation, type OpenedBid, type OpenedFile } from "./tabulation";
 
 const REASON = "signed original not received by the bid due time";
 
@@ -58,11 +58,39 @@ describe("toTabulation", () => {
   });
 });
 
+describe("toTabulation electronic bond", () => {
+  it("says uploaded only when that bid has a bid_bond file", () => {
+    const e = bid({ bid_bond_choice: "electronic", bond_original_received: null });
+    const file: OpenedFile = { bid_id: "b1", slot: "bid_bond", path: "p", file_name: "b.pdf", file_status: "ok" };
+    expect(toTabulation([e], [], [file]).rows[0].bond).toBe("Electronic bond (uploaded)");
+    expect(toTabulation([e], [], []).rows[0].bond).toBe("Electronic bond (not uploaded)");
+    expect(toTabulation([e], [], [{ ...file, bid_id: "other" }]).rows[0].bond).toBe("Electronic bond (not uploaded)");
+  });
+});
+
 describe("bondLabel", () => {
   it("judges the bond by the bidder's choice", () => {
-    expect(bondLabel("electronic", null)).toBe("Electronic bond (uploaded)");
-    expect(bondLabel("paper", true)).toBe("Paper original mailed: received");
-    expect(bondLabel("paper", false)).toBe("Paper original mailed: not received");
-    expect(bondLabel(null, null)).toBe("Not required");
+    expect(bondLabel("electronic", null, true)).toBe("Electronic bond (uploaded)");
+    expect(bondLabel("electronic", null, false)).toBe("Electronic bond (not uploaded)");
+    expect(bondLabel("paper", true, false)).toBe("Paper original mailed: received");
+    expect(bondLabel("paper", false, false)).toBe("Paper original mailed: not received");
+    expect(bondLabel(null, null, false)).toBe("Not required");
+  });
+});
+
+describe("bond cure next to the label", () => {
+  it("adds the cure status so a bond cured after close does not read as missing", () => {
+    const e = bid({ bid_bond_choice: "electronic", bond_original_received: null });
+    expect(toTabulation([e], [], [], { b1: "cured" }).rows[0].bond).toBe("Electronic bond (not uploaded); cured after close");
+    expect(toTabulation([e], [], [], { b1: "pending" }).rows[0].bond).toBe("Electronic bond (not uploaded); cure pending");
+    expect(toTabulation([e], [], [], { b1: "failed" }).rows[0].bond)
+      .toBe("Electronic bond (not uploaded); not received by the cure deadline");
+    expect(toTabulation([e], [], [], { other: "cured" }).rows[0].bond).toBe("Electronic bond (not uploaded)");
+  });
+
+  it("leaves the label alone when no cure was due", () => {
+    expect(bondWithCure("Not required", "not_required")).toBe("Not required");
+    expect(bondWithCure("Electronic bond (uploaded)", "ok")).toBe("Electronic bond (uploaded)");
+    expect(bondWithCure("Electronic bond (uploaded)", undefined)).toBe("Electronic bond (uploaded)");
   });
 });

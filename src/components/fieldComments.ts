@@ -12,7 +12,7 @@ export function renderedFieldPaths(d: SolicitationData): Set<string> {
     "location.address", "location.city", "location.county",
     "requester.name", "requester.email", "requester.phone",
     "projectManager.name", "projectManager.email", "projectManager.phone",
-    "estimateCents", "fundingSource", "federalFunds",
+    "estimateCents", "fundingAmountCents", "fundingSource", "federalFunds",
     "releaseDate", "adStart", "adEnd", "newspapers", "questionsDue", "answersDue",
     "bidDueDate", "bidDueTime", "bidValidityDays",
     "tentativeAwardDate", "estimatedStartDate", "estimatedCompletionDate",

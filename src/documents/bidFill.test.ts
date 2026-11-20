@@ -8,7 +8,7 @@ const company: BidderCompany = {
 };
 const draft = (over: Partial<BidDraft> = {}): BidDraft => ({
   bidId: "b1", reference: "K7QM-2XVD", version: 3, itemCents: [100, 200], alternateCents: [50],
-  bidBondChoice: "paper", files: [], ...over,
+  bidBondChoice: "paper", apprenticeCommitment: null, files: [], ...over,
 });
 
 describe("toBidFill", () => {
@@ -16,8 +16,12 @@ describe("toBidFill", () => {
     expect(toBidFill(company, "Ridge Builders", draft())).toEqual({
       legalName: "Ridge Builders", address: "1 Elm St", contact: "Ana Ridge, 555-0142, ana@example.test",
       residentClaimed: false, residentCertificate: null, reference: "K7QM-2XVD", bidVersion: 3,
-      itemCents: [100, 200], alternateCents: [50], bidBond: "paper",
+      itemCents: [100, 200], alternateCents: [50], bidBond: "paper", apprenticeCommitment: null,
     });
+  });
+  it("carries the apprentice commitment", () => {
+    const fill = toBidFill(company, "R", draft({ apprenticeCommitment: true }));
+    expect(fill).toMatchObject({ apprenticeCommitment: true });
   });
   it("is incomplete when any item price is null", () => {
     expect(toBidFill(company, "R", draft({ itemCents: [100, null] }))).toEqual({ incomplete: true });

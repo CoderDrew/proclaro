@@ -1,5 +1,6 @@
 export { Button, ButtonLink, type ButtonLinkProps, type ButtonVariant, type ButtonProps } from "./Button";
 export { Card } from "./Card";
+export { ConfirmAction, type ConfirmActionProps } from "./ConfirmAction";
 export { Field, FieldGrid, Choice, MoneyInput } from "./Field";
 export { Notice, type NoticeTone } from "./Notice";
 export { StatusBadge } from "./StatusBadge";
