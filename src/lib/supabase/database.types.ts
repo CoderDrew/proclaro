@@ -113,6 +113,104 @@ isOneToOne: false
       referencedColumns: ["user_id"]
     }
                   ]
+                },"ai_check_calls": {
+                  Row: {
+                    "document_kind": string,"document_path": string,"id": string,"reserved_at": string,"reserved_by": string,"run_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "document_kind": string,"document_path": string,"id"?: string,"reserved_at"?: string,"reserved_by": string,"run_id": string
+                  }
+                  Update: {
+                    "document_kind"?: string,"document_path"?: string,"id"?: string,"reserved_at"?: string,"reserved_by"?: string,"run_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ai_check_calls_reserved_by_fkey"
+      columns: ["reserved_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "ai_check_calls_run_id_fkey"
+      columns: ["run_id"]
+isOneToOne: false
+      referencedRelation: "ai_check_runs"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"ai_check_items": {
+                  Row: {
+                    "call_failed": boolean,"created_at": string,"detail": string | null,"document_kind": string,"document_path": string | null,"excerpt": string | null,"extracted": string | null,"id": string,"item_code": string,"method": string,"page": number | null,"result": string,"run_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "call_failed"?: boolean,"created_at"?: string,"detail"?: string | null,"document_kind": string,"document_path"?: string | null,"excerpt"?: string | null,"extracted"?: string | null,"id"?: string,"item_code": string,"method": string,"page"?: number | null,"result": string,"run_id": string
+                  }
+                  Update: {
+                    "call_failed"?: boolean,"created_at"?: string,"detail"?: string | null,"document_kind"?: string,"document_path"?: string | null,"excerpt"?: string | null,"extracted"?: string | null,"id"?: string,"item_code"?: string,"method"?: string,"page"?: number | null,"result"?: string,"run_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ai_check_items_run_id_fkey"
+      columns: ["run_id"]
+isOneToOne: false
+      referencedRelation: "ai_check_runs"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"ai_check_reviews": {
+                  Row: {
+                    "decision": string,"id": string,"item_id": string,"reason": string | null,"reviewed_at": string,"reviewed_by": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "decision": string,"id"?: string,"item_id": string,"reason"?: string | null,"reviewed_at"?: string,"reviewed_by": string
+                  }
+                  Update: {
+                    "decision"?: string,"id"?: string,"item_id"?: string,"reason"?: string | null,"reviewed_at"?: string,"reviewed_by"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ai_check_reviews_item_id_fkey"
+      columns: ["item_id"]
+isOneToOne: false
+      referencedRelation: "ai_check_items"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "ai_check_reviews_reviewed_by_fkey"
+      columns: ["reviewed_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["user_id"]
+    }
+                  ]
+                },"ai_check_runs": {
+                  Row: {
+                    "bid_id": string,"bid_version": number,"finished_at": string | null,"id": string,"model": string,"recorded": boolean,"solicitation_version": number,"started_at": string,"started_by": string | null,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "bid_id": string,"bid_version": number,"finished_at"?: string | null,"id"?: string,"model": string,"recorded"?: boolean,"solicitation_version": number,"started_at"?: string,"started_by"?: string | null,"status"?: string
+                  }
+                  Update: {
+                    "bid_id"?: string,"bid_version"?: number,"finished_at"?: string | null,"id"?: string,"model"?: string,"recorded"?: boolean,"solicitation_version"?: number,"started_at"?: string,"started_by"?: string | null,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ai_check_runs_bid_id_fkey"
+      columns: ["bid_id"]
+isOneToOne: false
+      referencedRelation: "bids"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "ai_check_runs_started_by_fkey"
+      columns: ["started_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["user_id"]
+    }
+                  ]
                 },"audit_log": {
                   Row: {
                     "action": string,"actor_id": string | null,"created_at": string,"detail": NonNullable<Json>,"id": number,"solicitation_id": string | null
@@ -386,6 +484,44 @@ isOneToOne: false
       columns: ["voids_entry_id"]
 isOneToOne: true
       referencedRelation: "bid_original_log"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"bid_original_scans": {
+                  Row: {
+                    "attached_at": string,"attached_by": string,"bid_id": string,"id": string,"log_entry_id": string,"path": string,"superseded_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attached_at"?: string,"attached_by": string,"bid_id": string,"id"?: string,"log_entry_id": string,"path": string,"superseded_by"?: string | null
+                  }
+                  Update: {
+                    "attached_at"?: string,"attached_by"?: string,"bid_id"?: string,"id"?: string,"log_entry_id"?: string,"path"?: string,"superseded_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bid_original_scans_attached_by_fkey"
+      columns: ["attached_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "bid_original_scans_bid_id_fkey"
+      columns: ["bid_id"]
+isOneToOne: false
+      referencedRelation: "bids"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bid_original_scans_log_entry_id_fkey"
+      columns: ["log_entry_id"]
+isOneToOne: false
+      referencedRelation: "bid_original_log"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bid_original_scans_superseded_by_fkey"
+      columns: ["superseded_by"]
+isOneToOne: false
+      referencedRelation: "bid_original_scans"
       referencedColumns: ["id"]
     }
                   ]
@@ -871,14 +1007,14 @@ isOneToOne: false
                   ]
                 },"settings": {
                   Row: {
-                    "fiscal_year_start_month": number,"id": number,"office_name": string,"state_name": string,"timezone": string
+                    "ai_calls_per_day": number,"ai_calls_per_user_day": number,"ai_runs_per_bid": number,"fiscal_year_start_month": number,"id": number,"office_name": string,"state_name": string,"timezone": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "fiscal_year_start_month"?: number,"id"?: number,"office_name": string,"state_name": string,"timezone"?: string
+                    "ai_calls_per_day"?: number,"ai_calls_per_user_day"?: number,"ai_runs_per_bid"?: number,"fiscal_year_start_month"?: number,"id"?: number,"office_name": string,"state_name": string,"timezone"?: string
                   }
                   Update: {
-                    "fiscal_year_start_month"?: number,"id"?: number,"office_name"?: string,"state_name"?: string,"timezone"?: string
+                    "ai_calls_per_day"?: number,"ai_calls_per_user_day"?: number,"ai_runs_per_bid"?: number,"fiscal_year_start_month"?: number,"id"?: number,"office_name"?: string,"state_name"?: string,"timezone"?: string
                   }
                   Relationships: [
                     
@@ -1071,6 +1207,11 @@ isOneToOne: false
               "answered_in_number": number,"asked_at": string,"body": string,"id": string,"in_draft": boolean,"reference": string,"status": Database["public"]['Enums']["question_status"]
             }[]
                            },
+"ai_check_documents":
+{ Args: { "p_bid_id": string }; Returns: {
+              "document_kind": string,"path": string
+            }[]
+                           },
 "approve_addendum_alone":
 { Args: { "p_addendum_id": string }; Returns: undefined
                            },
@@ -1086,10 +1227,21 @@ isOneToOne: false
 "ask_question":
 { Args: { "p_body": string,"p_reference": string,"p_solicitation_id": string }; Returns: string
                            },
+"attach_original_scan":
+{ Args: { "p_log_entry_id": string,"p_path": string }; Returns: string
+                           },
 "award_check_info":
 { Args: { "p_solicitation_id": string }; Returns: {
               "can_check": boolean,"needs_new_pick": boolean,"prepared_by": string
             }[]
+                           },
+"begin_ai_check_document":
+{ Args: { "p_kind": string,"p_path": string,"p_run_id": string }; Returns: {
+              "bid_id": string,"solicitation_id": string
+            }[]
+                           },
+"bid_ai_check":
+{ Args: { "p_bid_id": string }; Returns: Json
                            },
 "bidding_state":
 { Args: { "p_solicitation_id": string }; Returns: string
@@ -1116,6 +1268,9 @@ isOneToOne: false
                            },
 "disagree_recap":
 { Args: { "p_comment": string,"p_solicitation_id": string }; Returns: undefined
+                           },
+"finish_ai_check":
+{ Args: { "p_run_id": string,"p_status": string }; Returns: undefined
                            },
 "log_bid_original":
 { Args: { "p_item": Database["public"]['Enums']["original_item"],"p_received_at"?: string,"p_reference": string,"p_solicitation_id": string,"p_version": number }; Returns: string
@@ -1173,6 +1328,11 @@ isOneToOne: false
               "alternate_cents": (number)[],"base_total_cents": number,"bid_bond_choice": Database["public"]['Enums']["bid_bond_choice"],"bid_id": string,"bidder_name": string,"bidder_org_id": string,"bond_original_received": boolean,"item_cents": (number)[],"non_responsive_reason": string,"original_received": boolean,"reference": string,"submitted_at": string,"version": number
             }[]
                            },
+"original_scans":
+{ Args: { "p_solicitation_id": string }; Returns: {
+              "attached_at": string,"bid_id": string,"log_entry_id": string,"path": string,"scan_id": string
+            }[]
+                           },
 "pick_award":
 { Args: { "p_bid_id": string,"p_reason": string,"p_solicitation_id": string }; Returns: string
                            },
@@ -1217,6 +1377,9 @@ isOneToOne: false
 "recap_draft":
 { Args: { "p_solicitation_id": string }; Returns: Json
                            },
+"record_ai_check_document":
+{ Args: { "p_items": Json,"p_run_id": string }; Returns: undefined
+                           },
 "register_bidder":
 { Args: { "p_address": string,"p_contact_email": string,"p_contact_name": string,"p_contact_phone": string,"p_legal_name": string,"p_resident_certificate": string,"p_resident_claimed": boolean }; Returns: string
                            },
@@ -1242,6 +1405,9 @@ isOneToOne: false
                            },
 "return_to_agency":
 { Args: { "p_comments": Json,"p_id": string }; Returns: undefined
+                           },
+"review_ai_check_item":
+{ Args: { "p_decision": string,"p_item_id": string,"p_reason": string }; Returns: undefined
                            },
 "review_bids":
 { Args: { "p_solicitation_id": string }; Returns: {
@@ -1292,6 +1458,9 @@ isOneToOne: false
                            },
 "start_addendum_review":
 { Args: { "p_addendum_id": string }; Returns: undefined
+                           },
+"start_ai_check":
+{ Args: { "p_bid_id": string,"p_model": string }; Returns: string
                            },
 "start_bid":
 { Args: { "p_solicitation_id": string }; Returns: string

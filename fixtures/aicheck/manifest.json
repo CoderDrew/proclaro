@@ -1,0 +1,394 @@
+[
+  {
+    "file": "ridgeback-signed-form.pdf",
+    "kind": "signed_form",
+    "seed": "ridgeback",
+    "facts": {
+      "legalName": "Ridgeback Builders LLC",
+      "baseTotalCents": 120000000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": "CR-0042",
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "signature_present": "met",
+      "amount_in_words": "met",
+      "addenda_listed": "met",
+      "form_version": "met",
+      "resident_certificate": "met"
+    }
+  },
+  {
+    "file": "ridgeback-insurance.pdf",
+    "kind": "insurance",
+    "seed": "ridgeback",
+    "facts": {
+      "legalName": "Ridgeback Builders LLC",
+      "baseTotalCents": 120000000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": "CR-0042",
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "insured_name": "met",
+      "coverage_dates": "met"
+    }
+  },
+  {
+    "file": "ridgeback-bond.pdf",
+    "kind": "bid_bond_scan",
+    "seed": "ridgeback",
+    "facts": {
+      "legalName": "Ridgeback Builders LLC",
+      "baseTotalCents": 120000000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": "CR-0042",
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "principal_name": "met",
+      "obligee": "met",
+      "surety_signature": "met"
+    }
+  },
+  {
+    "file": "granite-signed-form.pdf",
+    "kind": "signed_form",
+    "seed": "granite",
+    "facts": {
+      "legalName": "Granite Mesa Contractors",
+      "baseTotalCents": 118000000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": null,
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "signature_present": "met",
+      "amount_in_words": "met",
+      "addenda_listed": "met",
+      "form_version": "met"
+    }
+  },
+  {
+    "file": "granite-insurance.pdf",
+    "kind": "insurance",
+    "seed": "granite",
+    "facts": {
+      "legalName": "Granite Mesa Contractors",
+      "baseTotalCents": 118000000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": null,
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "insured_name": "met",
+      "coverage_dates": "not_met"
+    },
+    "defect": "Insurance expires before the bid due date."
+  },
+  {
+    "file": "granite-bond.pdf",
+    "kind": "bid_bond_scan",
+    "seed": "granite",
+    "facts": {
+      "legalName": "Granite Mesa Contractors",
+      "baseTotalCents": 118000000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": null,
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "principal_name": "met",
+      "obligee": "met",
+      "surety_signature": "met"
+    }
+  },
+  {
+    "file": "juniper-signed-form.pdf",
+    "kind": "signed_form",
+    "seed": "juniper",
+    "facts": {
+      "legalName": "Juniper Flats Paving",
+      "baseTotalCents": 117500000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": null,
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "signature_present": "met",
+      "amount_in_words": "not_met",
+      "addenda_listed": "met",
+      "form_version": "met"
+    },
+    "defect": "Amount in words differs from the portal total."
+  },
+  {
+    "file": "juniper-insurance.pdf",
+    "kind": "insurance",
+    "seed": "juniper",
+    "facts": {
+      "legalName": "Juniper Flats Paving",
+      "baseTotalCents": 117500000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": null,
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "insured_name": "met",
+      "coverage_dates": "met"
+    }
+  },
+  {
+    "file": "juniper-bond.pdf",
+    "kind": "bid_bond_scan",
+    "seed": "juniper",
+    "facts": {
+      "legalName": "Juniper Flats Paving",
+      "baseTotalCents": 117500000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": null,
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "principal_name": "met",
+      "obligee": "met",
+      "surety_signature": "met"
+    }
+  },
+  {
+    "file": "basalt-signed-form.pdf",
+    "kind": "signed_form",
+    "seed": "basalt",
+    "facts": {
+      "legalName": "Basalt Creek Builders",
+      "baseTotalCents": 119000000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": null,
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "signature_present": "met",
+      "amount_in_words": "met",
+      "addenda_listed": "not_met",
+      "form_version": "met"
+    },
+    "defect": "Lists Addendum 1, but 27-0003 has no addenda."
+  },
+  {
+    "file": "basalt-insurance.pdf",
+    "kind": "insurance",
+    "seed": "basalt",
+    "facts": {
+      "legalName": "Basalt Creek Builders",
+      "baseTotalCents": 119000000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": null,
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "insured_name": "met",
+      "coverage_dates": "met"
+    }
+  },
+  {
+    "file": "eval-unsigned-form.pdf",
+    "kind": "signed_form",
+    "seed": null,
+    "facts": {
+      "legalName": "Ridgeback Builders LLC",
+      "baseTotalCents": 120000000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": "CR-0042",
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "signature_present": "not_met",
+      "amount_in_words": "met",
+      "addenda_listed": "met",
+      "form_version": "met",
+      "resident_certificate": "met"
+    },
+    "defect": "Unsigned."
+  },
+  {
+    "file": "eval-wrong-version-form.pdf",
+    "kind": "signed_form",
+    "seed": null,
+    "facts": {
+      "legalName": "Granite Mesa Contractors",
+      "baseTotalCents": 118000000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 2,
+      "residentCertificate": null,
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "signature_present": "met",
+      "amount_in_words": "met",
+      "addenda_listed": "met",
+      "form_version": "not_met"
+    },
+    "defect": "Version 1 form for a version 2 bid."
+  },
+  {
+    "file": "eval-wrong-certificate-form.pdf",
+    "kind": "signed_form",
+    "seed": null,
+    "facts": {
+      "legalName": "Ridgeback Builders LLC",
+      "baseTotalCents": 120000000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": "CR-0042",
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "signature_present": "met",
+      "amount_in_words": "met",
+      "addenda_listed": "met",
+      "form_version": "met",
+      "resident_certificate": "not_met"
+    },
+    "defect": "Certificate number differs from the claim."
+  },
+  {
+    "file": "eval-wrong-insured.pdf",
+    "kind": "insurance",
+    "seed": null,
+    "facts": {
+      "legalName": "Juniper Flats Paving",
+      "baseTotalCents": 117500000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": null,
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "insured_name": "not_met",
+      "coverage_dates": "met"
+    },
+    "defect": "Insured is another company."
+  },
+  {
+    "file": "eval-wrong-principal-bond.pdf",
+    "kind": "bid_bond",
+    "seed": null,
+    "facts": {
+      "legalName": "Basalt Creek Builders",
+      "baseTotalCents": 119000000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": null,
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "principal_name": "not_met",
+      "obligee": "met",
+      "surety_signature": "met"
+    },
+    "defect": "Principal is another company."
+  },
+  {
+    "file": "eval-wrong-obligee-bond.pdf",
+    "kind": "bid_bond",
+    "seed": null,
+    "facts": {
+      "legalName": "Granite Mesa Contractors",
+      "baseTotalCents": 118000000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": null,
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "principal_name": "met",
+      "obligee": "not_met",
+      "surety_signature": "met"
+    },
+    "defect": "Obligee is not the agency."
+  },
+  {
+    "file": "eval-unsigned-surety-bond.pdf",
+    "kind": "bid_bond",
+    "seed": null,
+    "facts": {
+      "legalName": "Basalt Creek Builders",
+      "baseTotalCents": 119000000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": null,
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "principal_name": "met",
+      "obligee": "met",
+      "surety_signature": "not_met"
+    },
+    "defect": "No surety signature."
+  },
+  {
+    "file": "eval-qualifications.pdf",
+    "kind": "qualifications",
+    "seed": null,
+    "facts": {
+      "legalName": "Ridgeback Builders LLC",
+      "baseTotalCents": 120000000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": "CR-0042",
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "document_matches_slot": "met"
+    }
+  },
+  {
+    "file": "eval-wrong-qualifications.pdf",
+    "kind": "qualifications",
+    "seed": null,
+    "facts": {
+      "legalName": "Ridgeback Builders LLC",
+      "baseTotalCents": 120000000,
+      "publishedAddenda": [],
+      "submittedFormVersion": 1,
+      "residentCertificate": "CR-0042",
+      "agencyName": "Calder Department of Corrections",
+      "dueLocalDate": "2026-12-01"
+    },
+    "expected": {
+      "document_matches_slot": "not_met"
+    },
+    "defect": "An invoice uploaded as qualifications."
+  }
+]

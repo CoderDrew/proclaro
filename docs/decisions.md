@@ -298,6 +298,30 @@ Addenda, acknowledgments and the Q&A board. Design: `docs/superpowers/specs/2026
 - **The office addendum panel remounts after each action**, so the success message in the live region is lost (the same pattern as the slice 1 office page).
 - **Seeded addenda have no PDFs**, like the other seeded documents: SQL can't upload file bytes. Seeded solicitations have no attachments either, so the 27-0001 draft addendum needs its required attachments added before it can be submitted.
 
+## 2026-11-22 — Slice 3, the advisory AI document check, as built
+
+Design: `docs/superpowers/specs/2026-11-21-ai-document-check-design.md`. Drew decided: advisory only, met / not met / unclear with evidence and no confidence scores, the office scans each signed original after close, OpenAI with Drew's key, office-only trigger with caps and a kill switch, recorded results for seeded bids, and a planted-defect evaluation.
+
+- **Who and when.** Only office staff can scan, run, record or review a check, and only after close. Every function raises `sealed` before close, and opening-style reads take a share lock on the solicitation. The agency, bidders and the public never see results, recorded ones included, because bid documents stay confidential after close.
+- **Advisory, enforced.** No check function writes outcomes, flagged decisions, recaps or awards (a pgTAP assertion reads their bodies). The panel has no outcome buttons.
+- **Addenda on the form.** The model is asked for the addendum numbers only. The rule also drops dates and expands ranges ("1 through 3"), because real acknowledgment lines usually carry dates.
+- **Who decides each item.** The checklist is fixed per document kind. The model judges "ai" items. For "rule" items (amount in words, addenda listed, form version, resident certificate, names, obligee, coverage dates) it only extracts the value, and TypeScript compares it with the portal. A missing or unreadable value is "unclear", never "met".
+- **One call per document,** made from a server action the browser calls in turn, so no request handles a whole bid. The PDF goes to the OpenAI Responses API as a file input with a strict JSON schema of exactly that kind's item codes. The instructions treat the document as untrusted bidder material; the real guard is the schema plus the advisory role, since the reviewer sees the page and excerpt.
+- **Model.** The default is `gpt-6.2-astra`, the model OpenAI's file-input docs used on 2026-11-21; `OPENAI_MODEL` overrides it. No temperature is set, because not every current model accepts one.
+- **Caps and runs.** 3 runs per bid (recorded runs don't count), 50 document checks per office user per day and 200 in total, in `settings`. A document with no file ("Scan not attached") costs nothing.
+- **Reserve before the paid call.** The app calls `begin_ai_check_document` before it downloads a document or calls the model. The database checks run ownership, that the document is one of the run's own bid's documents, that it hasn't already been checked in this run, and the daily caps, and only then reserves the call. Items can be recorded only for a reserved document, and the facts come from the run's bid, never from ids the browser sends. The server action also refuses outright while checks are turned off or no key is configured. (Found by the final review: the first version checked these only after the call was paid for.)
+- **Retrying one document.** A failed model call is recorded as unclear items with the error class. The run stays open, and the reviewer can check the failed documents again (each retry is a new reserved call) or finish the run. The panel shows each item's latest result. The OpenAI client makes no retries of its own, so a timeout is never billed twice. One run can be running per bid; a run older than 10 minutes counts as failed. A new run starts unreviewed; earlier runs and their reviews stay in the history.
+- **Integrity of writes.** Office staff are trusted to store what the model returned. The database checks the structure: only the run's starter can add items, only to a running run, only with item codes of that document kind, and `recorded` has no API path.
+- **Scans** are stored in the sealed `bid-files` bucket at `bids/{bid}/{log entry}/scan-….pdf` (the shape the existing storage helpers parse). The browser checks PDF type, 20 MB and 30 pages before upload; the database checks the size again. A new scan supersedes the old one, which is kept.
+- **Seeds.** 27-0003's four bids carry uploaded insurance certificates (with each fixture's real size and MD5, so the opening's tamper check stays clean after `seed:files`), scans and one recorded run each. Basalt's planted finding is an addendum it lists, not a missing surety signature: its paper bond was never logged, so its bond items read "Scan not attached". The missing-signature case is in the evaluation-only documents.
+
+### Known gaps
+
+- **The live evaluation hasn't been run.** It needs Drew's key; the fixtures, scoring and report are in place.
+- **A modified browser could attach a scan over 30 pages.** The database checks only the size; the cost is model tokens, still inside the daily caps (enforced before each call).
+- **Smaller items from the final review are not done:** the amount-in-words parser returns "unclear" for "No/100" and en-dashes; a page number of 0 from the model makes that document's items unclear; the form-version rule takes the first number after "v"; and the agency name falls back to blank if it can't be read, which would show the obligee as not met.
+- **The scan-upload screens were checked by build and a browser walk on seeded data only;** no live AI run has been made through the screens.
+
 ## Open questions
 
 See `docs/discovery.md` §3.

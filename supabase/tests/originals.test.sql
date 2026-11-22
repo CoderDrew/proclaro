@@ -253,7 +253,7 @@ select throws_ok(format('update public.bid_original_log set reason = %L where id
   'P0001', null, 'update is rejected by trigger for the owner');
 select throws_ok(format('delete from public.bid_original_log where id = %L', :'e1'),
   'P0001', null, 'delete is rejected by trigger for the owner');
-select throws_ok('truncate public.bid_original_log', 'P0001', null, 'truncate is rejected by trigger for the owner');
+select throws_ok('truncate public.bid_original_log cascade', 'P0001', null, 'truncate is rejected by trigger for the owner');
 
 -- Row checks (owner inserts)
 select throws_ok(format('insert into public.bid_original_log (solicitation_id, bid_id, reference, version, item, '

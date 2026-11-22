@@ -83,6 +83,24 @@ The seed inserts five published, released solicitations directly (all fictional)
 
 Only `27-0003` has a funding amount set at publish. `27-0004`'s Addendum 1 froze its estimate as the funding amount for version 2, as publishing any addendum does; the others fall back to their estimate.
 
+## The advisory AI document check
+
+After close, office staff can run an AI check of each bid's documents on the bid review page. It reports met, not met or unclear for each checklist item, with the page and an excerpt, and the reviewer confirms or overrides each item. It never sets an outcome.
+
+**Setup (server environment only):**
+
+- `OPENAI_API_KEY`: a project-scoped key used only by this app. Never put it in a `NEXT_PUBLIC_` variable or commit it.
+- `OPENAI_MODEL` (optional): the model. The default is set in `src/server/aicheck/openai.ts`.
+- `AI_CHECK_ENABLED=1` turns live checks on. Anything else hides "Run check"; recorded results still show.
+- In the OpenAI dashboard, set a monthly spend limit on the project.
+- On any hosted site where a visitor could reach an office login, leave `AI_CHECK_ENABLED` unset.
+
+**Caps** (in `settings`, admin-editable): 3 runs per bid, 50 document checks per office user per day, 200 per day in total.
+
+**Seeded results:** after `npm run db:reset`, run `npm run seed:files` (local only) to upload the fictional documents for `27-0003`'s recorded results. Planted findings: Granite's insurance ends before the bid due date; Juniper's amount in words differs from its total; Basalt lists an addendum 27-0003 doesn't have; Basalt's bond scan isn't attached.
+
+**Evaluation:** `npm run aicheck:eval` checks every document in `fixtures/aicheck` with the live API (one call each; it costs money), reports the false-met rate separately from the false-not-met rate, and writes `docs/evaluation/YYYY-MM-DD-aicheck.md`. `npm run aicheck:fixtures` regenerates the documents; regenerating changes the insurance files, so update their sizes and MD5s in `supabase/seed.sql` (a test fails until you do).
+
 ## Tour of the bid review and award slice
 
 1. **`/bidder/solicitations/{id}`** after close: a bidder whose bond is missing sees "Bid bond cure" with the deadline and can upload only the bond. After the recap or memo is posted, each bidder sees its own outcome.

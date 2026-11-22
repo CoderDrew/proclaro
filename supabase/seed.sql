@@ -494,3 +494,134 @@ begin
           now() - interval '2 hours');
 end;
 $$;
+
+-- ---------------------------------------------------------------------------
+-- Slice 3: the AI document check on 27-0003, with recorded results (no live AI call).
+--   Each of the four bids gets an uploaded insurance certificate, a scan of its signed original and (where its paper
+--   bond was logged) a scan of the bond, plus one recorded check run whose items match fixtures/aicheck/manifest.json.
+--   Planted findings: Granite's insurance ends before the due date; Juniper's amount in words differs from its total;
+--   Basalt lists an addendum 27-0003 doesn't have. Basalt's bond was never logged (it is pending cure), so its bond
+--   scan reads "Scan not attached".
+--   SQL can't upload file bytes: `npm run seed:files` uploads the fixture PDFs to these paths after `db:reset`. The
+--   insurance rows carry each fixture's real size and MD5 eTag (pinned by a test), so the upload doesn't trip the
+--   opening's tamper check. Without the upload, the recorded results still show and the document links say so.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  v_sol      public.solicitations;
+  v_reviewer uuid := '20000000-0000-0000-0000-000000000003';
+  v_bid      uuid;
+  v_ver      uuid;
+  v_entry    uuid;
+  v_bond     uuid;
+  v_obj      uuid;
+  v_run      uuid;
+  v_path     text;
+  v_scan     text;
+  v_bond_scan text;
+  v_at       timestamptz;
+  b          record;
+begin
+  select * into v_sol from public.solicitations s where s.number = '27-0003';
+  v_at := v_sol.bid_due_at + interval '46 minutes';
+  for b in
+    select * from (values
+      ('ridgeback', '10000000-0000-0000-0000-000000000011'::uuid, 37542, 'b732b6dcd92f1f92719af048218ed154',
+       'Ridgeback Builders LLC', 'One Million Two Hundred Thousand and 00/100 Dollars', 'None', 'CR-0042',
+       'Ridgeback Builders, L.L.C.', '01/01/2026 to 12/31/2027', 'met', null::text,
+       'met', 'met', null::text),
+      ('granite', '10000000-0000-0000-0000-000000000012'::uuid, 37725, '2f2d6b8b59591caafda25f61555d84af',
+       'Granite Mesa Contractors', 'One Million One Hundred Eighty Thousand Dollars and 00/100', 'None', null,
+       'Granite Mesa Contractors', '07/01/2025 to 06/30/2026', 'not_met', 'Coverage is not in force on the bid due date.',
+       'met', 'met', null),
+      ('juniper', '10000000-0000-0000-0000-000000000013'::uuid, 37052, '46d2f3dddae9033cc73277bc13fd96bc',
+       'Juniper Flats Paving', 'One Million One Hundred Fifty-Seven Thousand Five Hundred Dollars', 'None', null,
+       'Juniper Flats Paving', '2026-03-01 to 2027-03-01', 'met', null,
+       'not_met', 'met', 'The amount in words differs from the portal total.'),
+      ('basalt', '10000000-0000-0000-0000-000000000014'::uuid, 37245, '5c5839fe23b49396d0a598b441e29bec',
+       'Basalt Creek Builders', 'One Million One Hundred Ninety Thousand Dollars', '1', null,
+       'Basalt Creek Builders', '2026-01-15 to 2027-01-15', 'met', null,
+       'met', 'not_met', 'The addenda listed differ from the published addenda.')
+    ) as t(key, org, ins_size, ins_md5, legal, words, addenda, cert, insured, coverage, coverage_result, coverage_detail,
+           amount_result, addenda_result, form_detail)
+  loop
+    select bb.id into v_bid from public.bids bb where bb.solicitation_id = v_sol.id and bb.bidder_org_id = b.org;
+    select v.id into v_ver from public.bid_versions v where v.bid_id = v_bid and v.version = 1;
+    select l.id into v_entry from public.bid_original_log l where l.bid_id = v_bid and l.item = 'signed_form';
+    v_bond := null;
+    select l.id into v_bond from public.bid_original_log l where l.bid_id = v_bid and l.item = 'bid_bond';
+
+    -- The uploaded insurance certificate (an object row with the fixture's real size and eTag).
+    v_path := format('bids/%s/%s/seed-%s-insurance.pdf', v_bid, gen_random_uuid(), b.key);
+    insert into storage.objects (bucket_id, name, metadata)
+    values ('bid-files', v_path, jsonb_build_object('size', b.ins_size, 'eTag', format('"%s"', b.ins_md5),
+                                                     'mimetype', 'application/pdf'))
+    returning id into v_obj;
+    insert into public.bid_version_files (version_id, slot, path, file_name, object_id, object_size, object_etag)
+    values (v_ver, 'insurance', v_path, 'insurance.pdf', v_obj, b.ins_size, format('"%s"', b.ins_md5));
+
+    -- Scans of the signed original and, where logged, the paper bond (attached half an hour after close).
+    v_scan := format('bids/%s/%s/scan-seed-%s-signed-form.pdf', v_bid, v_entry, b.key);
+    insert into storage.objects (bucket_id, name, metadata)
+    values ('bid-files', v_scan, '{"size": 120000, "mimetype": "application/pdf"}');
+    insert into public.bid_original_scans (log_entry_id, bid_id, path, attached_by, attached_at)
+    values (v_entry, v_bid, v_scan, v_reviewer, v_sol.bid_due_at + interval '30 minutes');
+    v_bond_scan := null;
+    if v_bond is not null then
+      v_bond_scan := format('bids/%s/%s/scan-seed-%s-bond.pdf', v_bid, v_bond, b.key);
+      insert into storage.objects (bucket_id, name, metadata)
+      values ('bid-files', v_bond_scan, '{"size": 40000, "mimetype": "application/pdf"}');
+      insert into public.bid_original_scans (log_entry_id, bid_id, path, attached_by, attached_at)
+      values (v_bond, v_bid, v_bond_scan, v_reviewer, v_sol.bid_due_at + interval '31 minutes');
+    end if;
+
+    -- The recorded run.
+    insert into public.ai_check_runs (bid_id, started_by, started_at, finished_at, status, model, bid_version,
+                                      solicitation_version, recorded)
+    values (v_bid, null, v_sol.bid_due_at + interval '45 minutes', v_at, 'done', 'recorded', 1, 1, true)
+    returning id into v_run;
+
+    insert into public.ai_check_items (run_id, document_kind, document_path, item_code, method, result, page, excerpt,
+                                       extracted, detail, created_at)
+    select v_run, x.kind, x.path, x.code, x.method, x.result, x.page, x.excerpt, x.extracted, x.detail, v_at
+      from (values
+        ('signed_form', v_scan, 'signature_present', 'ai', 'met', 3, 'Signature: [signed]', null::text, null::text),
+        ('signed_form', v_scan, 'amount_in_words', 'rule', b.amount_result, 1, b.words, b.words,
+           case when b.amount_result = 'not_met' then b.form_detail end),
+        ('signed_form', v_scan, 'addenda_listed', 'rule', b.addenda_result, 2,
+           'Addenda acknowledged (list numbers): ' || b.addenda, b.addenda,
+           case when b.addenda_result = 'not_met' then b.form_detail end),
+        ('signed_form', v_scan, 'form_version', 'rule', 'met', 1, 'Solicitation 27-0003 · Version 1 · Page 1 of 3',
+           'Version 1', null),
+        ('insurance', v_path, 'insured_name', 'rule', 'met', 1, 'Insured: ' || b.insured, b.insured, null),
+        ('insurance', v_path, 'coverage_dates', 'rule', b.coverage_result, 1,
+           'Commercial general liability, CGL-55120, ' || b.coverage, b.coverage, b.coverage_detail)
+      ) as x(kind, path, code, method, result, page, excerpt, extracted, detail);
+
+    if b.cert is not null then
+      insert into public.ai_check_items (run_id, document_kind, document_path, item_code, method, result, page, excerpt,
+                                         extracted, created_at)
+      values (v_run, 'signed_form', v_scan, 'resident_certificate', 'rule', 'met', 2,
+              'Resident bidder certificate number (if claimed): ' || b.cert, b.cert, v_at);
+    end if;
+
+    if v_bond_scan is not null then
+      insert into public.ai_check_items (run_id, document_kind, document_path, item_code, method, result, page, excerpt,
+                                         extracted, created_at)
+      select v_run, 'bid_bond_scan', v_bond_scan, x.code, x.method, 'met', 1, x.excerpt, x.extracted, v_at
+        from (values
+          ('principal_name', 'rule', 'Know all persons by these presents that ' || b.legal || ', as Principal', b.legal),
+          ('obligee', 'rule', 'unto State of Calder, Calder Department of Corrections, as Obligee',
+             'State of Calder, Calder Department of Corrections'),
+          ('surety_signature', 'ai', 'Surety (attorney-in-fact) signature: [signed]', null)
+        ) as x(code, method, excerpt, extracted);
+    else
+      insert into public.ai_check_items (run_id, document_kind, document_path, item_code, method, result, detail,
+                                         created_at)
+      select v_run, 'bid_bond_scan', null, c, case when c = 'surety_signature' then 'ai' else 'rule' end, 'unclear',
+             'Scan not attached', v_at
+        from unnest(array['principal_name', 'obligee', 'surety_signature']) c;
+    end if;
+  end loop;
+end;
+$$;

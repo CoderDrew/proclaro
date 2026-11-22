@@ -11,7 +11,8 @@ export type DomainStatus =
   | { kind: "logEntry"; flag: "afterDue" }
   | { kind: "evaluation"; stage: string; awaitingAgency: boolean }
   | { kind: "review"; status: string }
-  | { kind: "question"; status: string };
+  | { kind: "question"; status: string }
+  | { kind: "aiCheck"; result: string };
 
 type Badge = { tone: StatusTone; label: string };
 
@@ -67,6 +68,13 @@ const QUESTION: Record<string, Badge> = {
   closed: { tone: "neutral", label: "Closed" },
 };
 
+// An AI document check item's result (advisory): always a word, never colour alone.
+const AI_CHECK: Record<string, Badge> = {
+  met: { tone: "success", label: "Met" },
+  not_met: { tone: "danger", label: "Not met" },
+  unclear: { tone: "warning", label: "Unclear" },
+};
+
 /** A label is never blank: an empty value reads "Unknown". */
 function readable(s: string): string {
   return s.trim() === "" ? "Unknown" : s;
@@ -110,6 +118,8 @@ export function statusBadge(s: DomainStatus): Badge {
       return Object.hasOwn(REVIEW, s.status) ? REVIEW[s.status] : { tone: "neutral", label: readable(s.status) };
     case "question":
       return Object.hasOwn(QUESTION, s.status) ? QUESTION[s.status] : { tone: "neutral", label: readable(s.status) };
+    case "aiCheck":
+      return Object.hasOwn(AI_CHECK, s.result) ? AI_CHECK[s.result] : { tone: "neutral", label: readable(s.result) };
     default:
       return { tone: "neutral", label: "Unknown" };
   }

@@ -12,7 +12,10 @@
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
-    "db:types": "supabase gen types typescript --local > src/lib/supabase/database.types.ts"
+    "db:types": "supabase gen types typescript --local > src/lib/supabase/database.types.ts",
+    "aicheck:fixtures": "node scripts/aicheck-fixtures.mjs",
+    "seed:files": "node scripts/seed-files.mjs",
+    "aicheck:eval": "vitest run --config vitest.eval.config.ts"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
@@ -20,6 +23,8 @@
     "@supabase/supabase-js": "^2.119.0",
     "date-fns": "^4.4.0",
     "next": "15.5.29",
+    "openai": "^7.62.0",
+    "pdf-lib": "^1.17.1",
     "playwright-core": "^1.65.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",

@@ -8,6 +8,9 @@ import { ReviewTable, type ClaimView, type ReviewRowView } from "./ReviewTable";
 import { RecapPanel, type RecapPanelProps } from "./RecapPanel";
 import { AwardPanel, type AwardPanelProps } from "./AwardPanel";
 import { parseAward, parseRecap } from "@/domain/recap/snapshot";
+import { aiCheckConfig } from "@/server/aicheck/openai";
+import { DocumentCheckPanel } from "./aicheck/DocumentCheckPanel";
+import { parseCheck, type CheckView } from "./aicheck/view";
 
 export const dynamic = "force-dynamic";
 
@@ -111,6 +114,8 @@ export default async function OfficeReviewPage({ params }: { params: Promise<{ i
     };
   });
   const [recap, award] = await Promise.all([loadRecap(supabase, id, stage), loadAward(supabase, id, stage)]);
+  const { checks, links } = await loadChecks(supabase, rows);
+  const aiEnabled = aiCheckConfig().enabled;
 
   const claimView: ClaimView[] = claims.data.map((c) => ({
     bidId: c.bid_id,
@@ -148,11 +153,38 @@ export default async function OfficeReviewPage({ params }: { params: Promise<{ i
       />
       <RecapPanel solicitationId={id} stage={stage} tz={tz} {...recap} />
       {award ? <AwardPanel solicitationId={id} stage={stage} tz={tz} {...award} /> : null}
+      <h2>Document checks</h2>
+      {checks.map((c) => (
+        <DocumentCheckPanel key={c.bidId} solicitationId={id} bidId={c.bidId} reference={c.reference}
+          bidderName={c.bidderName} enabled={aiEnabled} check={c.check} links={links} />
+      ))}
     </Page>
   );
 }
 
 type Client = Awaited<ReturnType<typeof createServerClient>>;
+
+/**
+ * Each opened bid's latest document check (office only, after close) and short-lived signed links to the documents
+ * it checked, so the reviewer can open the page an excerpt came from.
+ */
+async function loadChecks(
+  supabase: Client, rows: { bid_id: string; reference: string; bidder_name: string }[],
+): Promise<{ checks: { bidId: string; reference: string; bidderName: string; check: CheckView }[]; links: Record<string, string> }> {
+  const checks = await Promise.all(rows.map(async (r) => {
+    const res = await supabase.rpc("bid_ai_check", { p_bid_id: r.bid_id });
+    if (res.error) throw new Error(res.error.message);
+    return { bidId: r.bid_id, reference: r.reference, bidderName: r.bidder_name, check: parseCheck(res.data) };
+  }));
+  const paths = [...new Set(checks.flatMap((c) => c.check.items.map((i) => i.documentPath))
+    .filter((p): p is string => p !== null))];
+  const links: Record<string, string> = {};
+  if (paths.length > 0) {
+    const signed = await supabase.storage.from("bid-files").createSignedUrls(paths, 600);
+    for (const s of signed.data ?? []) if (s.path && s.signedUrl && !s.error) links[s.path] = s.signedUrl;
+  }
+  return { checks, links };
+}
 type RecapData = Pick<RecapPanelProps, "preview" | "returned" | "draft" | "posted">;
 
 /**

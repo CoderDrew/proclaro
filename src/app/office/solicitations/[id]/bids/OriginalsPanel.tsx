@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { logOriginal, voidOriginal } from "./actions";
 import { ITEM_LABELS, ORIGINAL_ITEMS } from "./logic";
 import type { ActionResult } from "../logic";
+import { ScanAttach } from "./ScanAttach";
 import { Button, Card, EmptyState, Field, FieldGrid, Notice, StatusBadge, Table, Td, Th } from "@/components/ui";
 
 export interface IndexRow { reference: string; version: number; status: string }
@@ -23,6 +24,11 @@ export interface EntryView {
   /** Receipts only: the void's reason when this receipt has been voided. */
   voidedReason: string | null;
   afterDue: boolean;
+  bidId: string;
+  /** After close, receipts that aren't voided can take a scan (for the AI document check). */
+  scannable: boolean;
+  /** A signed link to the entry's current scan, when there is one. */
+  scanUrl: string | null;
 }
 
 /**
@@ -157,6 +163,10 @@ export function OriginalsPanel(props: {
                     </Td>
                     <Td>{e.by}</Td>
                     <Td>
+                      {props.canWork && e.scannable && !struck && (
+                        <ScanAttach bidId={e.bidId} entryId={e.id}
+                          entryLabel={`entry ${shortId(e.id)} (${e.reference})`} scanUrl={e.scanUrl} />
+                      )}
                       {props.canWork && !e.voidsEntryId && !struck && voiding !== e.id && (
                         <Button type="button" variant="danger" disabled={busy} aria-label={`Void entry ${shortId(e.id)}`}
                           onClick={() => { setVoiding(e.id); setVoidReason(""); }}>Void</Button>

@@ -68,6 +68,8 @@ export default async function OfficeBidsPage({ params }: { params: Promise<{ id:
   const opening = await openingSection(supabase, id, sol.published_snapshot, sol.data, formatInstant(sol.bid_due_at, tz));
   const due = new Date(sol.bid_due_at).getTime();
   const voidOf = new Map(log.data!.filter((e) => e.voids_entry_id).map((e) => [e.voids_entry_id!, e.reason ?? ""]));
+  const closed = Date.now() >= due;
+  const scans = closed ? await loadScans(supabase, id) : new Map<string, { bidId: string; url: string | null }>();
   const entries: EntryView[] = log.data!.map((e) => ({
     id: e.id,
     logged: formatInstant(e.logged_at, tz),
@@ -81,6 +83,9 @@ export default async function OfficeBidsPage({ params }: { params: Promise<{ id:
     voidedReason: voidOf.get(e.id) ?? null,
     afterDue: e.received_at !== null
       && (new Date(e.logged_at).getTime() > due || new Date(e.received_at).getTime() > due),
+    bidId: scans.get(e.id)?.bidId ?? "",
+    scannable: scans.has(e.id),
+    scanUrl: scans.get(e.id)?.url ?? null,
   }));
 
   return (
@@ -99,6 +104,22 @@ export default async function OfficeBidsPage({ params }: { params: Promise<{ id:
 }
 
 type ServerClient = Awaited<ReturnType<typeof createServerClient>>;
+
+/** After close: each scannable log entry's bid and current scan (a short-lived signed link), office only. */
+async function loadScans(
+  supabase: ServerClient, id: string,
+): Promise<Map<string, { bidId: string; url: string | null }>> {
+  const res = await supabase.rpc("original_scans", { p_solicitation_id: id });
+  if (res.error) return new Map();
+  const rows = res.data as { log_entry_id: string; bid_id: string; path: string | null }[];
+  const paths = rows.map((r) => r.path).filter((p): p is string => p !== null);
+  const byPath = new Map<string, string>();
+  if (paths.length > 0) {
+    const signed = await supabase.storage.from("bid-files").createSignedUrls(paths, 600);
+    for (const s of signed.data ?? []) if (s.path && s.signedUrl && !s.error) byPath.set(s.path, s.signedUrl);
+  }
+  return new Map(rows.map((r) => [r.log_entry_id, { bidId: r.bid_id, url: r.path ? byPath.get(r.path) ?? null : null }]));
+}
 
 /** The sealed notice, or (after close) the tabulation, submitted prices and files. */
 async function openingSection(
