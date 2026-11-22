@@ -1,5 +1,5 @@
 // Resets the hosted database to the seed: reruns every migration and supabase/seed.sql on the linked project, uploads
-// the seed files, then checks the demo password. Run with `npm run hosted:reset` (reads .env.hosted, never committed).
+// the seed files and the seeded solicitations' published PDFs, then checks the demo password. Run with `npm run hosted:reset` (reads .env.hosted, never committed).
 //
 // supabase/seed.sql uses the public local password. This script seeds from a temporary, git-ignored copy with
 // DEMO_PASSWORD in its place, so the public password never exists on the hosted database. Afterwards it signs in with
@@ -56,6 +56,9 @@ async function main() {
     rmSync(HOSTED_SEED, { force: true });
   }
   run("node", ["scripts/seed-files.mjs", "--hosted"]);
+  // The seeded solicitations' published PDFs, rendered locally and uploaded (scripts/seed-documents.live.test.ts).
+  process.env.SEED_TARGET = "hosted";
+  run("npx", ["vitest", "run", "--config", "vitest.seed.config.ts"]);
 
   if (await signsIn(url, anonKey, PUBLIC_LOCAL_PASSWORD)) {
     throw new Error(

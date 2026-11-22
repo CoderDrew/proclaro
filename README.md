@@ -71,7 +71,7 @@ Self-signup is on (`enable_signup = true`). Changing it needs `npx supabase stop
 
 ## Seeded solicitations
 
-The seed inserts five published, released solicitations directly (all fictional). Each has the `rfb_path` and `bid_form_path` that publishing would set, so its public page renders, but no PDF is uploaded, so the documents show as unavailable.
+The seed inserts five published, released solicitations directly (all fictional). Each has the `rfb_path` and `bid_form_path` that publishing would set, so its public page renders. SQL can't upload file bytes, so run `npm run seed:docs` after `npm run db:reset` to render and upload the published PDFs (the hosted reset does this itself); until then the documents show as unavailable.
 
 | Number | What it is for |
 |---|---|
@@ -138,5 +138,6 @@ Never set `DEV_EMAIL_LOGIN`. Leave `AI_CHECK_ENABLED` unset, because every visit
    (git-ignored).
 3. Run `npm run hosted:reset`.
 
-The reset reruns the migrations and the seed, uploads the seed files, and fails loudly if the public local password
-still signs in.
+The reset reruns the migrations and the seed, uploads the seed files, renders and uploads the seeded solicitations'
+published PDFs, and fails loudly if the public local password still signs in. Locally, `npm run seed:docs` renders the
+same PDFs after `npm run db:reset`.

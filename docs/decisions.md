@@ -253,7 +253,7 @@ Rulings 2–14 changed or refined the plan. Ruling 1 accepted the planner's reso
 - **The recap fallback after a disagree is allowed and recorded.** A reviewer whose recap was sent back can post it alone as "no second reviewer available"; it is stamped and audited, not blocked.
 - **`recap_stale` is now a backstop only.** Since Ruling 14 no API path changes a bid's status after the recap is sent to check, so `post_recap`'s staleness check guards against future paths rather than a known race.
 - **The memo is blocked by an unverified resident claim** even though residency can't change a memo. Verifying the claim (one action) clears it.
-- **Seeded solicitations have no PDFs.** The seed sets `rfb_path` and `bid_form_path` so public pages render, but SQL can't upload file bytes, so their documents show as unavailable.
+- **Seeded solicitations have no PDFs** until `npm run seed:docs` runs (2026-11-22: it renders every seeded version's RFB, bid form and addendum with the app's renderers and uploads them; `npm run hosted:reset` runs it).
 - **The posted `recaps` and `awards` rows include office user ids** (`prepared_by`, `checked_by`) readable by anyone; the public page shows only the snapshot.
 
 ## 2026-11-20 — Slice 2c, as built
@@ -296,7 +296,7 @@ Addenda, acknowledgments and the Q&A board. Design: `docs/superpowers/specs/2026
 - **The narrative autosave timer isn't re-armed while the text is dirty**, so leaving the page within 5 seconds of typing can lose the last edit.
 - **Switching a flagged bid to non-responsive keeps the automatic acknowledgment note** in the note field; the reviewer edits it.
 - **The office addendum panel remounts after each action**, so the success message in the live region is lost (the same pattern as the slice 1 office page).
-- **Seeded addenda have no PDFs**, like the other seeded documents: SQL can't upload file bytes. Seeded solicitations have no attachments either, so the 27-0001 draft addendum needs its required attachments added before it can be submitted.
+- **Seeded addenda get their PDFs from `npm run seed:docs`**, like the other seeded documents (SQL can't upload file bytes). Seeded solicitations have no attachments either, so the 27-0001 draft addendum needs its required attachments added before it can be submitted.
 
 ## 2026-11-22 — Slice 3, the advisory AI document check, as built
 
