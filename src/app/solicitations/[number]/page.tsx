@@ -8,6 +8,7 @@ import { parseAward, parseRecap, memoText } from "@/domain/recap/snapshot";
 import { RecapTable } from "@/components/RecapTable";
 import { Card, DateTime, Money, Page, PageHeader, StatusBadge, Table, Td, Th } from "@/components/ui";
 import { bidStatus, formatInstant, onlyPublic } from "../status";
+import { addendumHeading, groupAnswers, versionLabel } from "../qa";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,23 @@ export default async function SolicitationPage({ params }: { params: Promise<{ n
     label: a.label,
     url: await link(a.storagePath, a.storagePath.split("/").pop() ?? "attachment"),
   })));
+
+  // Every published version (old ones stay viewable) and the published answers; neither carries any identity.
+  const [versionsRes, answersRes] = await Promise.all([
+    supabase.rpc("solicitation_version_list", { p_solicitation_id: row.id }),
+    supabase.rpc("published_answers", { p_solicitation_id: row.id }),
+  ]);
+  if (versionsRes.error) throw new Error(versionsRes.error.message);
+  if (answersRes.error) throw new Error(answersRes.error.message);
+  const versions = await Promise.all([...versionsRes.data].sort((a, b) => b.version - a.version).map(async (v) => ({
+    version: v.version,
+    current: v.is_current,
+    publishedAt: v.published_at,
+    rfb: v.rfb_path ? await link(v.rfb_path, `RFB-${number}-v${v.version}.pdf`) : null,
+    bidForm: v.bid_form_path ? await link(v.bid_form_path, `Bid-Form-${number}-v${v.version}.pdf`) : null,
+    addendum: v.addendum_path ? await link(v.addendum_path, `Addendum-${number}-${v.version - 1}.pdf`) : null,
+  })));
+  const answerGroups = groupAnswers(answersRes.data);
 
   // The posted recap or memo and the award are the only public disclosure of bids. Only kind, snapshot and posted_at are
   // read (the rows also carry user ids), and nothing about bids is read before posting.
@@ -119,6 +137,42 @@ export default async function SolicitationPage({ params }: { params: Promise<{ n
           ))}
         </ul>
       </Card>
+
+      {versions.length > 1 ? (
+        <Card title="Versions" data-testid="public-versions">
+          <ul>
+            {versions.map((v) => (
+              <li key={v.version}>
+                <strong>{versionLabel(v.version, v.current)}</strong>, published <DateTime iso={v.publishedAt} tz={tz} />:{" "}
+                {v.rfb ? <a href={v.rfb}>Request for Bids (PDF)</a> : "Request for Bids (unavailable)"}
+                {", "}
+                {v.bidForm ? <a href={v.bidForm}>Bid form (PDF)</a> : "Bid form (unavailable)"}
+                {v.version > 1 ? (
+                  <>{", "}{v.addendum ? <a href={v.addendum}>{addendumHeading(v.version - 1)} (PDF)</a> : `${addendumHeading(v.version - 1)} (unavailable)`}</>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
+
+      {answerGroups.length > 0 ? (
+        <Card title="Questions and answers" data-testid="public-qa">
+          {answerGroups.map((g) => (
+            <section key={g.addendum} aria-labelledby={`qa-addendum-${g.addendum}`}>
+              <h3 id={`qa-addendum-${g.addendum}`}>{addendumHeading(g.addendum)}</h3>
+              <dl>
+                {g.items.map((it, i) => (
+                  <div key={i}>
+                    <dt>Question: {it.question}</dt>
+                    <dd>Answer: {it.answer}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
+        </Card>
+      ) : null}
 
       {recap && recapRes.data && recap.kind === "recap" ? (
         <Card title="Bid recap" data-testid="public-recap">

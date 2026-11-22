@@ -13,23 +13,27 @@ const draft = (over: Partial<BidDraft> = {}): BidDraft => ({
 
 describe("toBidFill", () => {
   it("builds the fill from a complete draft", () => {
-    expect(toBidFill(company, "Ridge Builders", draft())).toEqual({
+    expect(toBidFill(company, "Ridge Builders", draft(), [])).toEqual({
       legalName: "Ridge Builders", address: "1 Elm St", contact: "Ana Ridge, 555-0142, ana@example.test",
       residentClaimed: false, residentCertificate: null, reference: "K7QM-2XVD", bidVersion: 3,
       itemCents: [100, 200], alternateCents: [50], bidBond: "paper", apprenticeCommitment: null,
+      acknowledgedAddenda: [],
     });
   });
   it("carries the apprentice commitment", () => {
-    const fill = toBidFill(company, "R", draft({ apprenticeCommitment: true }));
+    const fill = toBidFill(company, "R", draft({ apprenticeCommitment: true }), []);
     expect(fill).toMatchObject({ apprenticeCommitment: true });
   });
   it("is incomplete when any item price is null", () => {
-    expect(toBidFill(company, "R", draft({ itemCents: [100, null] }))).toEqual({ incomplete: true });
+    expect(toBidFill(company, "R", draft({ itemCents: [100, null] }), [])).toEqual({ incomplete: true });
   });
   it("is incomplete when any alternate price is null", () => {
-    expect(toBidFill(company, "R", draft({ alternateCents: [null] }))).toEqual({ incomplete: true });
+    expect(toBidFill(company, "R", draft({ alternateCents: [null] }), [])).toEqual({ incomplete: true });
   });
   it("is incomplete with no item prices at all", () => {
-    expect(toBidFill(company, "R", draft({ itemCents: [] }))).toEqual({ incomplete: true });
+    expect(toBidFill(company, "R", draft({ itemCents: [] }), [])).toEqual({ incomplete: true });
+  });
+  it("carries the acknowledged addenda ascending, without duplicates", () => {
+    expect(toBidFill(company, "R", draft(), [2, 1, 2])).toMatchObject({ acknowledgedAddenda: [1, 2] });
   });
 });

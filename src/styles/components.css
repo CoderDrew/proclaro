@@ -576,3 +576,6 @@ a.ui-button--danger:hover {
   display: grid;
   gap: var(--space-2);
 }
+.ui-prewrap {
+  white-space: pre-wrap;
+}

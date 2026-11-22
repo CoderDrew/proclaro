@@ -277,7 +277,8 @@ begin
                                 v_due - interval '2 hours', v_due - interval '1 hour', b.bond_logged);
   end loop;
 
-  -- 27-0004 (slice 2b): open for 14 days, estimate $1.5M, so a bidder can answer the apprentice commitment.
+  -- 27-0004 (slice 2b): open for 14 days, estimate $1.5M, so a bidder can answer the apprentice commitment. Published
+  -- three days ago (its release date), so its slice 2c history below (bids, questions, Addendum 1) comes after it.
   v_data := v_base || jsonb_build_object(
     'shortTitle', 'Kitchen Renovation', 'longTitle', 'Kitchen Renovation at Calder Central Facility',
     'summary', 'Renovate the central kitchen and replace its ventilation.',
@@ -295,7 +296,7 @@ begin
   v_id := gen_random_uuid();
   insert into public.solicitations (id, agency_id, created_by, state, number, fiscal_year, data, version,
                                     published_at, release_date, bid_due_at, published_snapshot, rfb_path, bid_form_path)
-  values (v_id, v_agency, v_author, 'published', '27-0004', 2027, v_data, 1, now(), app.today() - 3, v_due,
+  values (v_id, v_agency, v_author, 'published', '27-0004', 2027, v_data, 1, now() - interval '3 days', app.today() - 3, v_due,
           jsonb_build_object('data', v_data, 'clauses', v_clauses, 'settings', v_settings, 'renderedAt', now()),
           format('solicitations/%s/v1/rfb.pdf', v_id), format('solicitations/%s/v1/bid-form.pdf', v_id));
 
@@ -331,3 +332,165 @@ $$;
 
 drop function app.seed_closed_bid(uuid, uuid, bigint[], bigint[], public.bid_bond_choice, boolean, timestamptz,
                                   timestamptz, boolean);
+
+-- Version history (0026): every seeded published solicitation gets its version 1, exactly as the 0026 backfill does
+-- for rows published before the migration (db reset runs migrations before this seed).
+insert into public.solicitation_versions (solicitation_id, version, snapshot, rfb_path, bid_form_path, bid_due_at,
+                                          published_at, published_by)
+select s.id, 1, s.published_snapshot, s.rfb_path, s.bid_form_path, s.bid_due_at, coalesce(s.published_at, now()), null
+  from public.solicitations s
+ where s.state = 'published'
+on conflict (solicitation_id, version) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- Addenda, acknowledgments and questions (slice 2c). Inserted directly, as publish_addendum and the other definer
+-- functions would have written them, and after the version 1 backfill above, since Addendum 1 moves the current
+-- pointer. No addendum PDF is uploaded (SQL cannot write file bytes), so the v2 documents show as unavailable.
+--   27-0004: Addendum 1, published a day ago, adds Item 3 (version 2, schedule changed). Granite submitted at version
+--            1, so its bid needs resubmitting. Ridgeback has a draft priced against version 2 and has not acknowledged
+--            Addendum 1. Questions in every status: one answered by Addendum 1, one open, one closed as a duplicate.
+--   27-0001: Addendum 1 in draft by the Corrections author, moving the bid due date 7 days later, for walking review
+--            and publish.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  v_author    uuid := '20000000-0000-0000-0000-000000000001';  -- Corrections Author (owns 27-0001 and 27-0004)
+  v_reviewer1 uuid := '20000000-0000-0000-0000-000000000003';
+  v_reviewer2 uuid := '20000000-0000-0000-0000-000000000004';
+  v_ridgeback uuid := '20000000-0000-0000-0000-000000000011';
+  v_granite   uuid := '20000000-0000-0000-0000-000000000012';
+  v_sol       public.solicitations;
+  v_data      jsonb;
+  v_snapshot  jsonb;
+  v_due       timestamptz;
+  v_add       uuid := gen_random_uuid();
+  v_q1        uuid := gen_random_uuid();
+  v_q2        uuid := gen_random_uuid();
+  v_q3        uuid := gen_random_uuid();
+  v_bid       uuid;
+  v_published timestamptz := now() - interval '1 day';
+  v_funding   bigint;
+  v_base      text;
+begin
+  -- 27-0004 ------------------------------------------------------------------
+  select * into v_sol from public.solicitations s where s.number = '27-0004';
+  v_funding := app.funding_cents(v_sol.id);  -- the estimate, as start_addendum copies it into the addendum
+  v_base := format('solicitations/%s/v2', v_sol.id);
+
+  -- Granite's bid, submitted at version 1 two days ago (before the addendum), so resubmit is required.
+  v_bid := gen_random_uuid();
+  insert into public.bids (id, solicitation_id, bidder_org_id, reference, created_by, created_at)
+  values (v_bid, v_sol.id, '10000000-0000-0000-0000-000000000012', app.new_bid_reference(), v_granite,
+          now() - interval '2 days 2 hours');
+  insert into public.bid_versions (bid_id, version, submitted_at, submitted_by, item_cents, alternate_cents,
+                                   bid_bond_choice, apprentice_commitment, bidder_legal_name, solicitation_version)
+  values (v_bid, 1, now() - interval '2 days', v_granite, array[132000000, 14500000]::bigint[],
+          array[3800000]::bigint[], 'paper', true, 'Granite Mesa Contractors', 1);
+
+  -- Questions: Ridgeback's (answered by Addendum 1), Granite's duplicate of it (closed), Granite's open one. Each
+  -- ask writes an audit row with no actor, as ask_question does.
+  insert into public.questions (id, solicitation_id, asked_by, org_id, body, reference, asked_at) values
+    (v_q1, v_sol.id, v_ridgeback, '10000000-0000-0000-0000-000000000011',
+     'Does the base bid include the grease interceptor shown on the plumbing sheets?', 'Plumbing sheets',
+     now() - interval '2 days 4 hours'),
+    (v_q3, v_sol.id, v_granite, '10000000-0000-0000-0000-000000000012',
+     'Is the grease interceptor part of the base bid or priced separately?', '',
+     now() - interval '2 days 3 hours'),
+    (v_q2, v_sol.id, v_granite, '10000000-0000-0000-0000-000000000012',
+     'Can the existing walk-in cooler stay in service until the replacement is delivered?', 'Alternate 1',
+     now() - interval '6 hours');
+  insert into public.audit_log (solicitation_id, actor_id, action, detail, created_at) values
+    (v_sol.id, null, 'ask_question', jsonb_build_object('question_id', v_q1), now() - interval '2 days 4 hours'),
+    (v_sol.id, null, 'ask_question', jsonb_build_object('question_id', v_q3), now() - interval '2 days 3 hours'),
+    (v_sol.id, null, 'ask_question', jsonb_build_object('question_id', v_q2), now() - interval '6 hours');
+
+  update public.questions q
+     set status = 'closed', close_reason = 'duplicate', closed_by = v_reviewer1,
+         closed_at = now() - interval '2 days 1 hour'
+   where q.id = v_q3;
+  insert into public.audit_log (solicitation_id, actor_id, action, detail, created_at)
+  values (v_sol.id, v_reviewer1, 'close_question', jsonb_build_object('question_id', v_q3, 'reason', 'duplicate'),
+          now() - interval '2 days 1 hour');
+
+  -- Addendum 1 adds Item 3 (the interceptor). Only the schedule changes; the bid due time stays.
+  v_data := jsonb_set(v_sol.data, '{schedule,items}', (v_sol.data -> 'schedule' -> 'items')
+              || jsonb_build_array(jsonb_build_object('name', 'Item 3', 'description', 'Grease interceptor')));
+  v_due := app.bid_due_at(v_data);
+  insert into public.addenda (id, solicitation_id, number, state, data, narrative, created_by, created_at,
+                              latest_submitted_at, reviewer_id, checker_id, single_reviewer, published_version)
+  values (v_add, v_sol.id, 1, 'published', v_data || jsonb_build_object('fundingAmountCents', v_funding),
+          'Adds Item 3, the grease interceptor, to the bid schedule and answers a question about it.',
+          v_author, now() - interval '2 days', now() - interval '1 day 6 hours', v_reviewer1, v_reviewer2, false, 2);
+  insert into public.addendum_answers (addendum_id, question_id, published_question, answer)
+  values (v_add, v_q1, 'Is the grease interceptor shown on the plumbing sheets part of the base bid?',
+          'No. This addendum adds it to the bid schedule as Item 3, priced separately.');
+  insert into public.audit_log (solicitation_id, actor_id, action, detail, created_at) values
+    (v_sol.id, v_author, 'start_addendum', jsonb_build_object('addendum_id', v_add, 'number', 1, 'to', 'draft'),
+     now() - interval '2 days'),
+    (v_sol.id, v_author, 'save_addendum_answer',
+     jsonb_build_object('addendum_id', v_add, 'number', 1, 'question_id', v_q1), now() - interval '1 day 7 hours'),
+    (v_sol.id, v_author, 'submit_addendum',
+     jsonb_build_object('addendum_id', v_add, 'number', 1, 'from', 'draft', 'to', 'submitted'),
+     now() - interval '1 day 6 hours'),
+    (v_sol.id, v_reviewer1, 'start_addendum_review',
+     jsonb_build_object('addendum_id', v_add, 'number', 1, 'from', 'submitted', 'to', 'in_review',
+                        'reviewer_id', v_reviewer1), now() - interval '1 day 5 hours'),
+    (v_sol.id, v_reviewer1, 'send_addendum_to_check',
+     jsonb_build_object('addendum_id', v_add, 'number', 1, 'from', 'in_review', 'to', 'in_check'),
+     now() - interval '1 day 4 hours'),
+    (v_sol.id, v_reviewer2, 'approve_addendum_check',
+     jsonb_build_object('addendum_id', v_add, 'number', 1, 'from', 'in_check', 'to', 'approved',
+                        'checker_id', v_reviewer2), now() - interval '1 day 2 hours');
+
+  -- Publish, as publish_addendum steps 10 to 14 write it: version 2 with the v2 paths, the funding frozen for version
+  -- 2, the pointer moved under the freeze exception, the answered question marked, and the audit row.
+  v_snapshot := jsonb_build_object('data', v_data, 'clauses', v_sol.published_snapshot -> 'clauses',
+                                   'settings', v_sol.published_snapshot -> 'settings', 'renderedAt', v_published);
+  insert into public.solicitation_versions (solicitation_id, version, snapshot, rfb_path, bid_form_path,
+                                            addendum_path, bid_due_at, published_at, published_by, schedule_changed)
+  values (v_sol.id, 2, v_snapshot, v_base || '/rfb.pdf', v_base || '/bid-form.pdf', v_base || '/addendum.pdf',
+          v_due, v_published, v_reviewer2, true);
+  insert into public.solicitation_funding_changes (solicitation_id, version, funding_cents, frozen_at)
+  values (v_sol.id, 2, v_funding, v_published);
+  perform set_config('app.publishing_addendum', v_sol.id::text, true);
+  update public.solicitations s
+     set version = 2, published_snapshot = v_snapshot, data = v_data, bid_due_at = v_due,
+         rfb_path = v_base || '/rfb.pdf', bid_form_path = v_base || '/bid-form.pdf'
+   where s.id = v_sol.id;
+  perform set_config('app.publishing_addendum', '', true);
+  update public.questions q set status = 'answered', answered_in = v_add where q.id = v_q1;
+  insert into public.audit_log (solicitation_id, actor_id, action, detail, created_at)
+  values (v_sol.id, v_reviewer2, 'publish_addendum', jsonb_build_object(
+            'addendum_id', v_add, 'number', 1, 'from', 'approved', 'to', 'published', 'version', 2,
+            'schedule_changed', true, 'bid_due_at', v_due, 'after_answers_due', false,
+            'rfb_path', v_base || '/rfb.pdf', 'bid_form_path', v_base || '/bid-form.pdf',
+            'addendum_path', v_base || '/addendum.pdf', 'funding_cents', v_funding),
+          v_published);
+
+  -- Ridgeback's draft, started after the addendum, so it is priced against version 2 (three items). It has not
+  -- acknowledged Addendum 1.
+  v_bid := gen_random_uuid();
+  insert into public.bids (id, solicitation_id, bidder_org_id, reference, created_by, created_at)
+  values (v_bid, v_sol.id, '10000000-0000-0000-0000-000000000011', app.new_bid_reference(), v_ridgeback,
+          now() - interval '12 hours');
+  insert into public.bid_drafts (bid_id, version, item_cents, alternate_cents, bid_bond_choice, apprentice_commitment,
+                                 solicitation_version, updated_at)
+  values (v_bid, 1, array[129500000, 15000000, 2400000]::bigint[], array[3600000]::bigint[], 'paper', false, 2,
+          now() - interval '11 hours');
+
+  -- 27-0001 ------------------------------------------------------------------
+  -- Addendum 1 in draft: the bid due date 7 days later (well past the 5-day rule), with a narrative.
+  select * into v_sol from public.solicitations s where s.number = '27-0001';
+  v_add := gen_random_uuid();
+  insert into public.addenda (id, solicitation_id, number, state, data, narrative, created_by, created_at)
+  values (v_add, v_sol.id, 1, 'draft',
+          v_sol.data || jsonb_build_object(
+            'bidDueDate', to_char((v_sol.data ->> 'bidDueDate')::date + 7, 'YYYY-MM-DD'),
+            'fundingAmountCents', app.funding_cents(v_sol.id)),
+          'Moves the bid due date one week later to allow time for a second site visit.',
+          v_author, now() - interval '2 hours');
+  insert into public.audit_log (solicitation_id, actor_id, action, detail, created_at)
+  values (v_sol.id, v_author, 'start_addendum', jsonb_build_object('addendum_id', v_add, 'number', 1, 'to', 'draft'),
+          now() - interval '2 hours');
+end;
+$$;

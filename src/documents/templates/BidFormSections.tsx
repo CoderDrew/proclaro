@@ -126,7 +126,7 @@ export function BidFormPages({ ctx, req, footer, id, fill }: {
             <tr><th>Address</th><td>{fill ? fill.address : blank}</td></tr>
             <tr><th>Contact person, phone and email</th><td>{fill ? fill.contact : blank}</td></tr>
             <tr><th>License and registration numbers</th><td>{blank}</td></tr>
-            <tr><th>Addenda acknowledged (list numbers)</th><td>{blank}</td></tr>
+            <tr><th>Addenda acknowledged (list numbers)</th><td>{fill && fill.acknowledgedAddenda.length > 0 ? fill.acknowledgedAddenda.join(", ") : blank}</td></tr>
             <tr><th>Claim resident preference?</th><td>
               {fill
                 ? (fill.residentClaimed ? `Yes (certificate ${fill.residentCertificate ?? ""})` : "No")

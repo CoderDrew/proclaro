@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SolicitationData } from "../domain/solicitation/types";
-import { renderBidFormHtml, renderRfbHtml } from "./renderHtml";
+import { renderAddendumHtml, renderBidFormHtml, renderRfbHtml, type AddendumDocContext } from "./renderHtml";
 import { ctxWith } from "./testFixtures";
 import type { BidFill } from "./bidFill";
 import { extractFooterTemplate } from "./pdf";
@@ -146,6 +146,7 @@ describe("bid form fill", () => {
     legalName: "R&D Builders <Calder>", address: "1 Elm St, Calder City", contact: "Ana Ridge, 555-0142, ana@example.test",
     residentClaimed: true, residentCertificate: "RC-123", reference: "K7QM-2XVD", bidVersion: 2,
     itemCents: [12_500_000, 234_567], alternateCents: [1_500_000], bidBond: "paper", apprenticeCommitment: null,
+    acknowledgedAddenda: [],
   };
   const ctx = ctxWith(16_000_000, {
     schedule: {
@@ -195,5 +196,70 @@ describe("bid form fill", () => {
   it("without a fill the output is unchanged from slice 1", () => {
     expect(renderBidFormHtml(ctx, { draft: false })).toMatchSnapshot();
     expect(renderBidFormHtml(ctx, { draft: true })).toMatchSnapshot();
+  });
+});
+
+describe("addendum PDF", () => {
+  const ctx: AddendumDocContext = {
+    number: 1,
+    version: 2,
+    solicitationNumber: "27-0001",
+    title: "Dormitory Roof Repair",
+    publishedOn: "2027-06-10",
+    narrative: "Adds a third dormitory.\n\nMoves the bid due date one week later.",
+    changes: [
+      { kind: "item", change: "added", position: 3, after: "Dormitory C: Roof" },
+      { kind: "alternate", change: "changed", position: 1, before: "Additive: Add gutters", after: "Additive: Add <gutters> & downspouts" },
+    ],
+    dateChanges: [{ field: "Bids due", before: "July 1, 2027, 1:00 PM MDT", after: "July 8, 2027, 1:00 PM MDT" }],
+    answers: [{ publishedQuestion: "Is the roof membrane specified?", answer: "Yes, see section 07 54 00." }],
+  };
+  const out = renderAddendumHtml(ctx);
+
+  it("matches the snapshot", () => {
+    expect(out).toMatchSnapshot();
+  });
+  it("prints the narrative, the schedule changes, the dates and the answered question", () => {
+    expect(out).toContain("<p>Adds a third dormitory.</p>");
+    expect(out).toContain("<p>Moves the bid due date one week later.</p>");
+    expect(out).toContain("Item 3 added: Dormitory C: Roof");
+    expect(out).toContain("Add &lt;gutters&gt; &amp; downspouts");
+    expect(out).toContain("July 8, 2027, 1:00 PM MDT");
+    expect(out).toContain("Is the roof membrane specified?");
+    expect(out).toContain("Yes, see section 07 54 00.");
+    expect(out).toContain("Version 2");
+    expect(out).toContain("June 10, 2027");
+  });
+  it("uses the bid form footer mechanism with the solicitation number and version", () => {
+    expect(extractFooterTemplate(out)).toBe("Solicitation 27-0001 · Version 2 · Page {n} of {total}");
+  });
+  it("says so when nothing changed and nothing was answered", () => {
+    const empty = renderAddendumHtml({ ...ctx, changes: [], dateChanges: [], answers: [] });
+    expect(empty).toContain("This addendum does not change the bid schedule.");
+    expect(empty).toContain("This addendum does not change the key dates.");
+    expect(empty).toContain("This addendum does not answer any questions.");
+  });
+});
+
+describe("addenda acknowledged on the bid form", () => {
+  const ctx = ctxWith(16_000_000);
+  const fill: BidFill = {
+    legalName: "Ridge Builders", address: "1 Elm St", contact: "Ana Ridge, 555-0142, ana@example.test",
+    residentClaimed: false, residentCertificate: null, reference: "K7QM-2XVD", bidVersion: 1,
+    itemCents: [12_500_000], alternateCents: [], bidBond: "paper", apprenticeCommitment: null,
+    acknowledgedAddenda: [1, 2],
+  };
+  const cell = (h: string) =>
+    /<tr><th>Addenda acknowledged \(list numbers\)<\/th><td>([\s\S]*?)<\/td><\/tr>/.exec(h)?.[1];
+
+  it("prints the acknowledged numbers joined by comma-space", () => {
+    expect(cell(renderBidFormHtml(ctx, { draft: false, fill }))).toBe("1, 2");
+  });
+  it("prints the blank line when nothing is acknowledged", () => {
+    expect(cell(renderBidFormHtml(ctx, { draft: false, fill: { ...fill, acknowledgedAddenda: [] } })))
+      .toBe('<span class="write-in"></span>');
+  });
+  it("prints the blank line on a blank form", () => {
+    expect(cell(renderBidFormHtml(ctx, { draft: false }))).toBe('<span class="write-in"></span>');
   });
 });

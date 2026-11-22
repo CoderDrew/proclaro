@@ -1,5 +1,36 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`addendum PDF > matches the snapshot 1`] = `
+"<!doctype html><html lang="en"><head><meta charSet="utf-8"/><title>Addendum 1 to Solicitation 27-0001</title><style>
+@page { size: letter; margin: 0.9in 0.8in 1in 0.8in; }
+* { box-sizing: border-box; }
+body { font-family: Georgia, "Times New Roman", serif; font-size: 11pt; line-height: 1.4; color: #111; margin: 0; }
+h1 { font-size: 22pt; margin: 0 0 12pt; }
+h2 { font-size: 15pt; margin: 0 0 8pt; border-bottom: 1px solid #444; padding-bottom: 3pt; }
+h3 { font-size: 12pt; margin: 12pt 0 4pt; }
+p { margin: 0 0 8pt; }
+table { border-collapse: collapse; width: 100%; margin: 6pt 0 12pt; }
+th, td { border: 1px solid #555; padding: 4pt 6pt; text-align: left; vertical-align: top; }
+th { background: #eee; }
+.major { page-break-before: always; }
+.cover { text-align: center; padding-top: 1.5in; }
+.cover .meta { margin-top: 24pt; }
+.toc li { margin: 3pt 0; }
+.watermark { position: fixed; top: 38%; left: 0; width: 100%; text-align: center; font-size: 54pt; font-weight: bold;
+  color: rgba(180, 0, 0, 0.14); transform: rotate(-30deg); pointer-events: none; z-index: 10; }
+.bid-page { page-break-before: always; page-break-inside: avoid; position: relative; min-height: 8.6in; }
+.bid-page:first-of-type { page-break-before: auto; }
+.bid-page footer { position: absolute; bottom: 0; left: 0; right: 0; border-top: 1px solid #555; padding-top: 4pt;
+  font-size: 9pt; text-align: center; }
+/* The PDF step prints the real page numbers in Chromium's footer; hide the in-body copy. */
+@media print { .bid-page footer { display: none; } }
+.write-in { display: inline-block; min-width: 2.5in; border-bottom: 1px solid #111; height: 1em; }
+.sig-line { margin-top: 28pt; border-bottom: 1px solid #111; width: 70%; }
+.price { text-align: right; width: 2in; }
+.muted { color: #555; }
+</style></head><body><h1>Addendum 1</h1><table data-addendum-meta="true"><tbody><tr><th>Solicitation</th><td>27-0001</td></tr><tr><th>Title</th><td>Dormitory Roof Repair</td></tr><tr><th>Version</th><td>Version 2</td></tr><tr><th>Published</th><td>June 10, 2027</td></tr></tbody></table><section data-addendum-narrative="true"><h2>Changes in this addendum</h2><p>Adds a third dormitory.</p><p>Moves the bid due date one week later.</p></section><section data-addendum-schedule="true"><h2>Bid schedule changes</h2><ul><li>Item 3 added: Dormitory C: Roof</li><li>Alternate 1 changed from &quot;Additive: Add gutters&quot; to &quot;Additive: Add &lt;gutters&gt; &amp; downspouts&quot;</li></ul></section><section data-addendum-dates="true"><h2>Key date changes</h2><table><thead><tr><th>Date</th><th>Was</th><th>Now</th></tr></thead><tbody><tr><td>Bids due</td><td>July 1, 2027, 1:00 PM MDT</td><td>July 8, 2027, 1:00 PM MDT</td></tr></tbody></table></section><section data-addendum-answers="true"><h2>Questions and answers</h2><div data-answer="true"><h3>Question 1</h3><p>Is the roof membrane specified?</p><p><strong>Answer</strong></p><p>Yes, see section 07 54 00.</p></div></section><footer hidden="" data-footer="final" data-footer-template="Solicitation 27-0001 · Version 2 · Page {n} of {total}"></footer></body></html>"
+`;
+
 exports[`bid form fill > without a fill the output is unchanged from slice 1 1`] = `
 "<!doctype html><html lang="en"><head><meta charSet="utf-8"/><title>Bid Form 27-0001</title><style>
 @page { size: letter; margin: 0.9in 0.8in 1in 0.8in; }

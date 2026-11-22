@@ -12,7 +12,7 @@ import {
   attachBidFile, createBidUploadUrl, removeBidFile, saveBidPrices, setApprenticeCommitment, setBidBondChoice, startBid,
   submitBid,
 } from "./actions";
-import { bidButtonState } from "./logic";
+import { bidButtonState, SUBMIT_ACK_WARNING } from "./logic";
 
 const toInput = (c: Cents | null) => (c === null ? "" : formatMoney(c).slice(1));
 
@@ -48,12 +48,18 @@ export function PrintBlankFormButton({ solicitationId }: { solicitationId: strin
 }
 
 export function BidDraftForm({
-  bidId, reference, version, due, readOnly, rules, initial,
+  bidId, reference, version, solicitationVersion, pricesCleared, missingAcknowledgments, due, readOnly, rules, initial,
 }: {
   bidId: string;
   reference: string;
   /** The version this draft becomes when submitted. */
   version: number;
+  /** The draft's solicitation_version as loaded; a save from a page older than a schedule change is refused (R13). */
+  solicitationVersion: number;
+  /** The prices-cleared notice, shown above the amounts, or null. */
+  pricesCleared: string | null;
+  /** Published addenda this bid has not acknowledged: the submit area warns (it never blocks). */
+  missingAcknowledgments: number[];
   /** The bid due time, already formatted in the configured zone. */
   due: string;
   readOnly: boolean;
@@ -106,9 +112,14 @@ export function BidDraftForm({
   async function savePrices() {
     setSaving(true);
     setMessage(null);
-    const r = await saveBidPrices(bidId, { items, alternates: alts });
+    const r = await saveBidPrices(bidId, { items, alternates: alts, solicitationVersion });
     setSaving(false);
-    if (!r.ok) { setMessage({ kind: "error", text: r.message }); return; }
+    if (!r.ok) {
+      setMessage({ kind: "error", text: r.message });
+      // The schedule changed under this page: reload so the new schedule and the cleared draft are shown.
+      if ("stale" in r) router.refresh();
+      return;
+    }
     setSaved({ items: items.join("|"), alts: alts.join("|") });
     setMessage({ kind: "ok", text: "Amounts saved." });
     router.refresh();
@@ -175,6 +186,7 @@ export function BidDraftForm({
       <p>Bids are due {due}.{readOnly && " Bidding has closed, so this draft can no longer be changed."}</p>
 
       <Card title="Amounts">
+        {pricesCleared && <Notice tone="warning" data-testid="prices-cleared">{pricesCleared}</Notice>}
         <Table>
           <thead><tr><Th>Line</Th><Th>Description</Th><Th numeric>Amount</Th></tr></thead>
           <tbody>
@@ -306,6 +318,9 @@ export function BidDraftForm({
                 {issues.map((i) => <li key={`${i.code}:${i.field}`} data-code={i.code}>{i.message}</li>)}
               </ul>
             </Notice>
+          )}
+          {missingAcknowledgments.length > 0 && (
+            <Notice tone="warning" data-testid="ack-warning">{SUBMIT_ACK_WARNING}</Notice>
           )}
           {!confirming ? (
             <div className="ui-actions">

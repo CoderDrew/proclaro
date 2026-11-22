@@ -10,6 +10,7 @@ import { requireBidderAction } from "../../guard";
 import {
   bidMessageFor, bidUploadPath, cureMessageFor, denialFrom, runSubmitCureBond, isUploadSlot, isUuid, parseBiddingState, runAttachFile, runRemoveFile, runSavePrices, runSetApprenticeCommitment,
   runSetBondChoice, runSubmitBid, toBidDraft, toResult, type BidActionResult, type BidReceipt, type FileDeps,
+  runAcknowledge, runAskQuestion, type SavePricesResult,
 } from "./logic";
 
 type Supabase = SupabaseClient<Database>;
@@ -45,14 +46,24 @@ export async function startBid(solicitationId: string): Promise<BidActionResult<
   });
 }
 
+/**
+ * Saves the amounts. `input.solicitationVersion` is the draft's solicitation_version the page loaded: a page loaded
+ * before a schedule-changing addendum gets the prices-cleared notice (stale) and nothing is written (R13).
+ */
 export async function saveBidPrices(
-  bidId: string, input: { items: string[]; alternates: string[] },
-): Promise<BidActionResult> {
+  bidId: string, input: { items: string[]; alternates: string[]; solicitationVersion: number },
+): Promise<SavePricesResult> {
+  // toResult passes runSavePrices' result through unchanged, stale flag included.
   return toResult(async () => {
     await requireBidderAction();
     assertBidId(bidId);
     const supabase = await createServerClient();
     return runSavePrices(input, {
+      async draftVersion() {
+        const { data, error } = await supabase.from("bid_drafts").select("solicitation_version").eq("bid_id", bidId).maybeSingle();
+        if (error) throw new Error(error.message);
+        return data?.solicitation_version ?? null;
+      },
       async schedule() {
         const bid = await supabase.from("bids").select("solicitation_id").eq("id", bidId).maybeSingle();
         if (bid.error) throw new Error(bid.error.message);
@@ -64,13 +75,19 @@ export async function saveBidPrices(
         return data ? { items: data.schedule.items.length, alternates: data.schedule.alternates.length } : null;
       },
       async save(items, alternates) {
+        // Only the draft version the page loaded: a reset that lands after the draftVersion read writes nothing.
         const { data, error } = await supabase
           .from("bid_drafts")
           .update({ item_cents: items as number[], alternate_cents: alternates as number[] })
           .eq("bid_id", bidId)
+          .eq("solicitation_version", input.solicitationVersion)
           .select("bid_id");
         if (error) throw new Error(error.message);
-        if (!data || data.length !== 1) throw new Error(await denialCode(supabase, bidId));
+        if (!data || data.length !== 1) {
+          const now = await supabase.from("bid_drafts").select("solicitation_version").eq("bid_id", bidId).maybeSingle();
+          if (now.data && now.data.solicitation_version !== input.solicitationVersion) throw new Error("stale_draft");
+          throw new Error(await denialCode(supabase, bidId));
+        }
       },
     });
   });
@@ -212,6 +229,37 @@ export async function submitBid(bidId: string): Promise<Awaited<ReturnType<typeo
     console.error("submitBid failed", e);
     return { ok: false, message: bidMessageFor(e) };
   }
+}
+
+/** Acknowledges a published addendum (final). acknowledge_addendum checks the bid, the addendum and the clock. */
+export async function acknowledgeAddendum(bidId: string, addendumNumber: number): Promise<BidActionResult> {
+  return toResult(async () => {
+    await requireBidderAction();
+    const supabase = await createServerClient();
+    return runAcknowledge(bidId, addendumNumber, {
+      async acknowledge(id, n) {
+        const { error } = await supabase.rpc("acknowledge_addendum", { p_bid_id: id, p_addendum_number: n });
+        if (error) throw new Error(error.message);
+      },
+    });
+  });
+}
+
+/** Posts a question on a solicitation. ask_question judges questionsDue on the database clock. */
+export async function askQuestion(
+  solicitationId: string, input: { body: string; reference: string },
+): Promise<BidActionResult> {
+  return toResult(async () => {
+    await requireBidderAction();
+    const supabase = await createServerClient();
+    return runAskQuestion(solicitationId, input, {
+      async ask(id, body, reference) {
+        const { data, error } = await supabase.rpc("ask_question", { p_solicitation_id: id, p_body: body, p_reference: reference });
+        if (error) throw new Error(error.message);
+        return data;
+      },
+    });
+  });
 }
 
 /** Starts a new, empty draft as the next version. */

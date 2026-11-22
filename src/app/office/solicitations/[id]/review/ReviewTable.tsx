@@ -4,7 +4,7 @@ import { startTransition, useActionState, useState, type FormEvent } from "react
 import { useRouter } from "next/navigation";
 import { sendFlags, setOutcome, verifyResident } from "./actions";
 import {
-  GROUND_LABELS, GROUNDS, OUTCOME_LABELS, OUTCOMES, apprenticeLabel, rowLabel,
+  GROUND_LABELS, GROUNDS, OUTCOME_LABELS, apprenticeLabel, initialNote, initialOutcome, noteForChoice, outcomeChoices, rowLabel,
   type BidOutcome, type NonResponsiveGround, type ReviewResult,
 } from "./logic";
 import {
@@ -17,6 +17,8 @@ export interface ReviewRowView {
   outcomeId: string | null;
   reference: string;
   version: number;
+  /** Published addendum numbers this bid did not acknowledge, ascending. */
+  missingAddenda: number[];
   bidderName: string;
   baseTotalCents: number;
   apprentice: boolean | null;
@@ -107,7 +109,7 @@ export function ReviewTable(props: {
             <thead>
               <tr>
                 <Th>Reference</Th><Th>Bidder</Th><Th numeric>Base total</Th><Th>Apprentice commitment</Th>
-                <Th>Status</Th><Th>Bid bond cure</Th>
+                <Th>Status</Th><Th>Bid bond cure</Th><Th>Missing acknowledgments</Th>
               </tr>
             </thead>
             <tbody>
@@ -128,6 +130,10 @@ export function ReviewTable(props: {
                         {r.cure.dueAt ? <>; due <DateTime iso={r.cure.dueAt} tz={tz} /></> : null}
                       </>
                     ) : "Not needed"}
+                  </Td>
+                  <Td>
+                    {r.missingAddenda.length > 0
+                      ? `Addendum ${r.missingAddenda.join(", ")}` : "None"}
                   </Td>
                 </tr>
               ))}
@@ -156,9 +162,10 @@ export function ReviewTable(props: {
 function OutcomeForm({ row }: { row: ReviewRowView }) {
   // Controlled, so a refused save keeps what was typed. After a save the choice already matches the new current
   // outcome; only the note is cleared.
-  const [outcome, setOutcomeChoice] = useState<string>(row.outcome ?? "");
+  const [outcome, setOutcomeChoice] = useState<string>(initialOutcome(row.outcome, row.missingAddenda));
   const [ground, setGround] = useState<string>(row.ground ?? "");
-  const [note, setNote] = useState("");
+  const missing = row.missingAddenda;
+  const [note, setNote] = useState(initialNote(initialOutcome(row.outcome, missing), missing));
   const [state, onSubmit, pending] = useReviewAction(setOutcome, () => setNote(""));
   const off = !row.editable;
   const id = `outcome-${row.bidId}`;
@@ -170,15 +177,20 @@ function OutcomeForm({ row }: { row: ReviewRowView }) {
         {row.statusReason ? <>: {row.statusReason}</> : null}
       </p>
       {row.note && row.status !== "flagged" ? <p className="muted">Last note: {row.note}</p> : null}
+      {missing.length > 0 ? (
+        <Notice tone="warning">
+          Did not acknowledge Addendum {missing.join(", ")}. This bid can only be accepted flagged for the agency.
+        </Notice>
+      ) : null}
       {row.formNote ? <p className="muted" id={`${id}-note-text`}>{row.formNote}</p> : null}
       <form onSubmit={onSubmit} className="ui-form">
         <input type="hidden" name="bidId" value={row.bidId} />
         <fieldset className="ui-fieldset" disabled={off}>
           <legend>Outcome<span className="visually-hidden"> for bid {row.reference}</span></legend>
-          {OUTCOMES.map((o) => (
+          {outcomeChoices(missing).map((o) => (
             <Choice key={o} label={OUTCOME_LABELS[o]}>
               <input type="radio" name="outcome" value={o} checked={outcome === o} disabled={off}
-                onChange={() => setOutcomeChoice(o)} />
+                onChange={() => { setOutcomeChoice(o); setNote((n) => noteForChoice(o, n, missing)); }} />
             </Choice>
           ))}
         </fieldset>

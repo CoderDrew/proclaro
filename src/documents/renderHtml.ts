@@ -1,10 +1,13 @@
 import { createElement } from "react";
+import type { AddendumDocContext } from "./addendumDoc";
 import type { BidFill } from "./bidFill";
 import type { DocContext } from "./clauses";
+import { AddendumDocument } from "./templates/AddendumDocument";
 import { BidForm } from "./templates/BidForm";
 import { RfbDocument } from "./templates/RfbDocument";
 
 export type { DocContext } from "./clauses";
+export type { AddendumDocContext } from "./addendumDoc";
 
 const DOCTYPE = "<!doctype html>";
 
@@ -28,4 +31,12 @@ export function renderRfbHtml(ctx: DocContext, opts: { draft: boolean }): string
  */
 export function renderBidFormHtml(ctx: DocContext, opts: { draft: boolean; fill?: BidFill }): string {
   return DOCTYPE + renderToStaticMarkup(createElement(BidForm, { ctx, draft: opts.draft, fill: opts.fill }));
+}
+
+/**
+ * The addendum PDF. Its footer is the bid form's (`Solicitation {number} · Version {version} · Page {n} of {total}`),
+ * carried by a hidden `<footer data-footer-template>` that renderPdf turns into Chromium's page footer.
+ */
+export function renderAddendumHtml(ctx: AddendumDocContext): string {
+  return DOCTYPE + renderToStaticMarkup(createElement(AddendumDocument, { ctx }));
 }

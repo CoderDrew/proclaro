@@ -1,6 +1,7 @@
 // Pure, server-free logic behind the office bid review screen. Kept out of the "use server" file so it can be tested
 // with injected deps and so clients can never pass their own `deps` to a server action.
 import type { Database } from "@/lib/supabase/database.types";
+import { ackNote } from "@/domain/addendum/ack";
 
 export type BidOutcome = Database["public"]["Enums"]["bid_outcome"];
 export type NonResponsiveGround = Database["public"]["Enums"]["non_responsive_ground"];
@@ -10,9 +11,30 @@ export type ReviewResult = { ok: true; message: string } | { ok: false; message:
 export const OUTCOMES: readonly BidOutcome[] = ["accepted", "accepted_flagged", "non_responsive"];
 export const OUTCOME_LABELS: Record<BidOutcome, string> = {
   accepted: "Accept",
-  accepted_flagged: "Accept and flag for the agency",
+  accepted_flagged: "Accepted, flagged for the agency",
   non_responsive: "Non-responsive",
 };
+
+/** Plain "Accepted" is refused by the database (ack_missing) when addenda are unacknowledged, so it is not offered. */
+export function outcomeChoices(missing: readonly number[]): readonly BidOutcome[] {
+  return missing.length > 0 ? OUTCOMES.filter((o) => o !== "accepted") : OUTCOMES;
+}
+
+/** The radio selected on load: flagged for a bid with missing addenda (unless already non-responsive). */
+export function initialOutcome(current: BidOutcome | null, missing: readonly number[]): BidOutcome | "" {
+  if (missing.length > 0 && current !== "non_responsive") return "accepted_flagged";
+  return current ?? "";
+}
+
+/** The note prefilled for a flagged choice; missing is ascending, as review_bids returns it. */
+export function initialNote(outcome: string, missing: readonly number[]): string {
+  return outcome === "accepted_flagged" && missing.length > 0 ? ackNote([...missing]) : "";
+}
+
+/** Choosing flagged fills a blank note with the fixed text; typed text is kept. */
+export function noteForChoice(outcome: string, note: string, missing: readonly number[]): string {
+  return note.trim() === "" ? initialNote(outcome, missing) : note;
+}
 
 export const GROUNDS: readonly NonResponsiveGround[] = ["late_upload", "wrong_form", "missing_signature"];
 export const GROUND_LABELS: Record<NonResponsiveGround, string> = {
@@ -64,6 +86,7 @@ const CODES: Record<string, string> = {
   resident_unverified: "Check every resident claim first.",
   recap_stale: "The bids changed after this recap was prepared. Send it back and prepare it again.",
   pick_required: "Choose the bid to award.",
+  ack_missing: "This bid did not acknowledge every addendum, so it can only be accepted flagged for the agency.",
   not_in_recap: "That bid is not in the posted recap.",
 };
 

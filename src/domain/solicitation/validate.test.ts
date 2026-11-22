@@ -139,3 +139,34 @@ describe("validate", () => {
     expect(has(r.errors, "schedule_empty")).toBe(true);
   });
 });
+
+describe("validate, addendum mode", () => {
+  // Bid due 2026-08-31 13:00 in Denver (MDT, UTC-6) = 19:00Z.
+  const due = Date.UTC(2026, 7, 31, 19, 0);
+  const FIVE_DAYS = 5 * 24 * 60 * 60 * 1000;
+  const addendum = (now: number) => ({ ...ctx, mode: "addendum" as const, now: new Date(now) });
+  const early = new Date(Date.UTC(2026, 7, 1)).getTime();
+
+  it("ignores a past releaseDate and the other locked fields", () => {
+    const d = { ...validData(), releaseDate: "2026-07-01", adStart: "2026-07-01", newspapers: "", adEnd: "2026-07-05" };
+    expect(validate(d, addendum(early))).toEqual({ errors: [], warnings: [] });
+    // The same data in setup mode is refused for the release date.
+    expect(has(validate(d, ctx).errors, "release_too_soon", "releaseDate")).toBe(true);
+  });
+  it("still reports date_order on the unlocked dates", () => {
+    const r = validate({ ...validData(), releaseDate: "2026-07-01", answersDue: { date: "2026-09-01", time: "13:00" } },
+      addendum(early));
+    expect(has(r.errors, "date_order", "bidDueDate")).toBe(true);
+  });
+  it("too_close at now + 5 days - 1 minute, not at now + 5 days", () => {
+    const tooClose = {
+      code: "too_close", field: "bidDueDate",
+      message: "Bids must stay open at least 5 days after this addendum is published.",
+    };
+    expect(validate(validData(), addendum(due - FIVE_DAYS + 60_000)).errors).toEqual([tooClose]);
+    expect(validate(validData(), addendum(due - FIVE_DAYS)).errors).toEqual([]);
+  });
+  it("setup mode never reports too_close", () => {
+    expect(validate(validData(), { ...ctx, mode: "setup" })).toEqual({ errors: [], warnings: [] });
+  });
+});

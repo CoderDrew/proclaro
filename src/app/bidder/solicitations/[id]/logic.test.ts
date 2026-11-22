@@ -4,6 +4,8 @@ import {
   runSetApprenticeCommitment, runSetBondChoice, toBidDraft, toReceipts, type FileDeps,
   afterSubmitNotice, denialFrom, describeReceipt, parseBiddingState, replaceConfirmation, replaceConfirmationFor, runSubmitBid, withdrawConfirmation,
   type SubmitBidDeps, cureMessageFor, cureStatusText, parseCureStatus, runSubmitCureBond,
+  addendaBanners, pricesClearedFor, pricesClearedNotice, SUBMIT_ACK_WARNING, toAcks, toAddendaStatus, bidderQuestionStatus,
+  questionsOpen, questionsClosedText, runAskQuestion, runAcknowledge, toResult, toMyQuestions,
 } from "./logic";
 import type { BidDraft } from "@/domain/bid/types";
 import type { SolicitationData } from "@/domain/solicitation/types";
@@ -92,32 +94,32 @@ describe("runSavePrices", () => {
   it("parses both lists against the stored schedule and saves cents", async () => {
     const saved: unknown[] = [];
     const r = await runSavePrices(
-      { items: ["125,000", "2,345.67"], alternates: ["15,000"] },
-      { schedule: async () => schedule, save: async (i, a) => { saved.push([i, a]); } },
+      { items: ["125,000", "2,345.67"], alternates: ["15,000"], solicitationVersion: 1 },
+      { draftVersion: async () => 1, schedule: async () => schedule, save: async (i, a) => { saved.push([i, a]); } },
     );
     expect(r).toEqual({ ok: true });
     expect(saved).toEqual([[[12_500_000, 234_567], [1_500_000]]]);
   });
   it("saves blanks as null so the draft can be partly filled", async () => {
     const saved: unknown[] = [];
-    await runSavePrices({ items: ["", "5"], alternates: [""] },
-      { schedule: async () => schedule, save: async (i, a) => { saved.push([i, a]); } });
+    await runSavePrices({ items: ["", "5"], alternates: [""], solicitationVersion: 1 },
+      { draftVersion: async () => 1, schedule: async () => schedule, save: async (i, a) => { saved.push([i, a]); } });
     expect(saved).toEqual([[[null, 500], [null]]]);
   });
   it("returns the input error without saving", async () => {
     let called = false;
-    const r = await runSavePrices({ items: ["1", "x"], alternates: ["2"] },
-      { schedule: async () => schedule, save: async () => { called = true; } });
+    const r = await runSavePrices({ items: ["1", "x"], alternates: ["2"], solicitationVersion: 1 },
+      { draftVersion: async () => 1, schedule: async () => schedule, save: async () => { called = true; } });
     expect(r).toEqual({ ok: false, message: "Item 2: enter a dollar amount like 12,500.00" });
     expect(called).toBe(false);
   });
   it("labels alternate errors", async () => {
-    const r = await runSavePrices({ items: ["1", "2"], alternates: ["x"] },
-      { schedule: async () => schedule, save: async () => {} });
+    const r = await runSavePrices({ items: ["1", "2"], alternates: ["x"], solicitationVersion: 1 },
+      { draftVersion: async () => 1, schedule: async () => schedule, save: async () => {} });
     expect(r).toEqual({ ok: false, message: "Alternate 1: enter a dollar amount like 12,500.00" });
   });
   it("is not_found when the solicitation is not visible", async () => {
-    await expect(runSavePrices({ items: [], alternates: [] }, { schedule: async () => null, save: async () => {} }))
+    await expect(runSavePrices({ items: [], alternates: [], solicitationVersion: 1 }, { draftVersion: async () => 1, schedule: async () => null, save: async () => {} }))
       .rejects.toThrow("not_found");
   });
 });
@@ -438,5 +440,188 @@ describe("cure", () => {
     await expect(runSubmitCureBond(BID, `bids/${BID}/../x/bond.pdf`, "bond.pdf", { submit }))
       .rejects.toThrow("invalid_upload_path");
     expect(submit).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Addenda, acknowledgments and questions (slice 2c)
+// ---------------------------------------------------------------------------
+const ACK1 = { addendumNumber: 1, publishedAt: "2026-11-10T17:00:00Z", acknowledgedAt: "2026-11-11T17:00:00Z" };
+const ACK2 = { addendumNumber: 2, publishedAt: "2026-11-15T17:00:00Z", acknowledgedAt: null };
+const ACK3 = { addendumNumber: 3, publishedAt: "2026-11-16T17:00:00Z", acknowledgedAt: null };
+const NO_CHANGE = { resubmitRequired: false, scheduleChangedIn: null, draftClearedBy: null };
+
+describe("addendaBanners", () => {
+  it("asks to acknowledge each unacknowledged addendum, verbatim", () => {
+    expect(addendaBanners([ACK1, ACK2, ACK3], NO_CHANGE, true)).toEqual([
+      { kind: "acknowledge", addendum: 2, text: "Addendum 2 published. Acknowledge it before bids close." },
+      { kind: "acknowledge", addendum: 3, text: "Addendum 3 published. Acknowledge it before bids close." },
+    ]);
+  });
+  it("shows the resubmit banner first, verbatim", () => {
+    expect(addendaBanners([ACK1, ACK2], { resubmitRequired: true, scheduleChangedIn: 2, draftClearedBy: null }, true)).toEqual([
+      { kind: "resubmit", addendum: 2, text: "Resubmit required: Addendum 2 changed the bid schedule." },
+      { kind: "acknowledge", addendum: 2, text: "Addendum 2 published. Acknowledge it before bids close." },
+    ]);
+  });
+  it("keys the resubmit banner on resubmit_required only (a withdrawn stale version has schedule_changed_in)", () => {
+    expect(addendaBanners([ACK1], { resubmitRequired: false, scheduleChangedIn: 1, draftClearedBy: null }, true)).toEqual([]);
+  });
+  it("shows nothing once every addendum is acknowledged and nothing is stale", () => {
+    expect(addendaBanners([ACK1], NO_CHANGE, true)).toEqual([]);
+    expect(addendaBanners([], null, true)).toEqual([]);
+  });
+  it("shows no banner after close", () => {
+    expect(addendaBanners([ACK1, ACK2], { resubmitRequired: true, scheduleChangedIn: 2, draftClearedBy: null }, false)).toEqual([]);
+  });
+});
+
+describe("prices cleared and the submit warning", () => {
+  it("words the prices-cleared notice verbatim", () => {
+    expect(pricesClearedNotice(2)).toBe("Addendum 2 changed the bid schedule, so your prices were cleared. Enter them again.");
+  });
+  it("shows it only while open and only when the draft was cleared", () => {
+    expect(pricesClearedFor({ ...NO_CHANGE, draftClearedBy: 1 }, true)).toBe(pricesClearedNotice(1));
+    expect(pricesClearedFor({ ...NO_CHANGE, draftClearedBy: 1 }, false)).toBeNull();
+    expect(pricesClearedFor(NO_CHANGE, true)).toBeNull();
+    expect(pricesClearedFor(null, true)).toBeNull();
+  });
+  it("has the submit warning verbatim", () => {
+    expect(SUBMIT_ACK_WARNING).toBe("Bids that don't acknowledge every addendum are flagged for the agency at close.");
+  });
+});
+
+describe("toAcks and toAddendaStatus", () => {
+  it("maps my_bid_acknowledgments rows (acknowledged_at null until acknowledged)", () => {
+    expect(toAcks([
+      { addendum_number: 1, published_at: "2026-11-10T17:00:00Z", acknowledged_at: "2026-11-11T17:00:00Z" },
+      { addendum_number: 2, published_at: "2026-11-15T17:00:00Z", acknowledged_at: null as unknown as string },
+    ])).toEqual([ACK1, ACK2]);
+  });
+  it("maps my_bid_status_addenda's single row, null when there is none", () => {
+    expect(toAddendaStatus([{ resubmit_required: true, schedule_changed_in: 2, draft_cleared_by: null as unknown as number }]))
+      .toEqual({ resubmitRequired: true, scheduleChangedIn: 2, draftClearedBy: null });
+    expect(toAddendaStatus([])).toBeNull();
+    expect(toAddendaStatus(null)).toBeNull();
+  });
+});
+
+describe("runSavePrices: a page loaded before a schedule change (R13)", () => {
+  it("refuses without writing and returns the prices-cleared notice", async () => {
+    const save = vi.fn(async () => {});
+    const schedule = vi.fn(async () => ({ items: 1, alternates: 0 }));
+    const r = await runSavePrices({ items: ["5"], alternates: [], solicitationVersion: 1 },
+      { draftVersion: async () => 3, schedule, save });
+    expect(r).toEqual({ ok: false, stale: true, message: "Addendum 2 changed the bid schedule, so your prices were cleared. Enter them again." });
+    expect(save).not.toHaveBeenCalled();
+    expect(schedule).not.toHaveBeenCalled();
+  });
+  it("refuses a missing or malformed version as invalid_state", async () => {
+    const save = vi.fn(async () => {});
+    await expect(runSavePrices({ items: [], alternates: [], solicitationVersion: "1" as unknown as number },
+      { draftVersion: async () => 1, schedule: async () => ({ items: 0, alternates: 0 }), save })).rejects.toThrow("invalid_state");
+    expect(save).not.toHaveBeenCalled();
+  });
+  it("lets the save through when there is no draft row (RLS words the refusal)", async () => {
+    const save = vi.fn(async () => {});
+    const r = await runSavePrices({ items: ["5"], alternates: [], solicitationVersion: 1 },
+      { draftVersion: async () => null, schedule: async () => ({ items: 1, alternates: 0 }), save });
+    expect(r).toEqual({ ok: true });
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("action error mapping (slice 2c)", () => {
+  it("words stale_draft from submit_bid", async () => {
+    const { deps } = submitDeps(DRAFT, async () => { throw new Error("stale_draft"); });
+    expect(await runSubmitBid(BID, deps)).toEqual({
+      ok: false, message: "An addendum changed the bid schedule. Reload the page and enter your prices again.",
+    });
+  });
+  it("words questions_closed and invalid_question from ask_question", async () => {
+    const closed = await toResult(() => runAskQuestion(BID, { body: "Is item 3 by the ton?", reference: "" },
+      { ask: async () => { throw new Error("questions_closed"); } }));
+    expect(closed).toEqual({ ok: false, message: "The deadline for questions has passed." });
+    const invalid = await toResult(() => runAskQuestion(BID, { body: "x", reference: "" },
+      { ask: async () => { throw new Error("invalid_question"); } }));
+    expect(invalid).toEqual({ ok: false, message: "Enter a question of 1 to 4,000 characters and a reference of up to 200." });
+  });
+  it("words bids_closed, not_found and not_open from acknowledge_addendum", async () => {
+    for (const [code, message] of [
+      ["bids_closed", "Bidding on this solicitation has closed."],
+      ["not_found", "That bid or solicitation was not found."],
+      ["not_open", "This solicitation is not open for bidding."],
+    ] as const) {
+      expect(await toResult(() => runAcknowledge(BID, 2, { acknowledge: async () => { throw new Error(code); } })))
+        .toEqual({ ok: false, message });
+    }
+  });
+});
+
+describe("runAskQuestion", () => {
+  it("trims and sends the question and reference", async () => {
+    const ask = vi.fn(async () => "q1");
+    expect(await runAskQuestion(BID, { body: "  Is item 3 by the ton?  ", reference: " Item 3 " }, { ask })).toEqual({ ok: true });
+    expect(ask).toHaveBeenCalledWith(BID, "Is item 3 by the ton?", "Item 3");
+  });
+  it("refuses a blank, an over-long question or reference, and a bad id, without calling the database", async () => {
+    const ask = vi.fn(async () => "q1");
+    const msg = { ok: false, message: "Enter a question of 1 to 4,000 characters and a reference of up to 200." };
+    expect(await runAskQuestion(BID, { body: "   ", reference: "" }, { ask })).toEqual(msg);
+    expect(await runAskQuestion(BID, { body: "x".repeat(4001), reference: "" }, { ask })).toEqual(msg);
+    expect(await runAskQuestion(BID, { body: "ok", reference: "r".repeat(201) }, { ask })).toEqual(msg);
+    await expect(runAskQuestion("nope", { body: "ok", reference: "" }, { ask })).rejects.toThrow("not_found");
+    expect(ask).not.toHaveBeenCalled();
+    expect(await runAskQuestion(BID, { body: "x".repeat(4000), reference: "r".repeat(200) }, { ask })).toEqual({ ok: true });
+  });
+});
+
+describe("runAcknowledge", () => {
+  it("acknowledges a whole positive addendum number", async () => {
+    const acknowledge = vi.fn(async () => {});
+    expect(await runAcknowledge(BID, 2, { acknowledge })).toEqual({ ok: true });
+    expect(acknowledge).toHaveBeenCalledWith(BID, 2);
+  });
+  it("refuses a bad id or number as not_found", async () => {
+    const acknowledge = vi.fn(async () => {});
+    await expect(runAcknowledge("nope", 2, { acknowledge })).rejects.toThrow("not_found");
+    await expect(runAcknowledge(BID, 0, { acknowledge })).rejects.toThrow("not_found");
+    await expect(runAcknowledge(BID, 1.5, { acknowledge })).rejects.toThrow("not_found");
+    expect(acknowledge).not.toHaveBeenCalled();
+  });
+});
+
+describe("questions", () => {
+  const tz = "America/Denver";
+  const due = { date: "2026-11-25", time: "13:00" }; // 20:00 UTC
+  it("words each status badge", () => {
+    expect(bidderQuestionStatus({ status: "open", answeredInNumber: null, closeReason: null })).toBe("Open");
+    expect(bidderQuestionStatus({ status: "answered", answeredInNumber: 2, closeReason: null })).toBe("Answered in Addendum 2");
+    expect(bidderQuestionStatus({ status: "closed", answeredInNumber: null, closeReason: "duplicate" })).toBe("Closed: duplicate");
+    expect(bidderQuestionStatus({ status: "closed", answeredInNumber: null, closeReason: "out_of_scope" })).toBe("Closed: out of scope");
+  });
+  it("is open until questionsDue, in the configured zone, and never after bidding closes", () => {
+    expect(questionsOpen(due, tz, new Date("2026-11-25T19:59:59Z"), "open")).toBe(true);
+    expect(questionsOpen(due, tz, new Date("2026-11-25T20:00:00Z"), "open")).toBe(false);
+    expect(questionsOpen(due, tz, new Date("2026-11-20T00:00:00Z"), "closed")).toBe(false);
+    expect(questionsOpen(null, tz, new Date("2026-11-20T00:00:00Z"), "open")).toBe(false);
+  });
+  it("words the closed line with the date and time", () => {
+    expect(questionsClosedText(due, tz)).toMatch(/^Questions closed November 25, 2026, 1:00 .*MST$/);
+    expect(questionsClosedText(null, tz)).toBe("Questions closed");
+  });
+  it("maps my_questions rows", () => {
+    expect(toMyQuestions([{
+      id: "q1", body: "B", reference: "", asked_at: "2026-11-20T17:00:00Z", status: "answered",
+      answered_in_number: 2, close_reason: null as unknown as "duplicate",
+    }])).toEqual([{ id: "q1", body: "B", reference: "", askedAt: "2026-11-20T17:00:00Z", status: "answered", answeredInNumber: 2, closeReason: null }]);
+  });
+});
+
+describe("describeReceipt: not counted after a schedule change", () => {
+  it("marks the current version Not counted when resubmit is required", () => {
+    expect(describeReceipt(RECEIPT, "America/Denver", true).status).toBe("Not counted");
+    expect(describeReceipt({ ...RECEIPT, isCurrent: false }, "America/Denver", true).status).toBe("superseded");
+    expect(describeReceipt(RECEIPT, "America/Denver").status).toBe("current");
   });
 });

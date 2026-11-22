@@ -1,0 +1,2 @@
+# SQL must check out with LF: migration string literals (e.g. clause bodies) embed the file's line endings.
+*.sql text eol=lf

@@ -212,8 +212,24 @@ begin
 end;
 $$;
 
+-- Stage the three PDFs of version p_version in the published bucket (the stand-in for the office's uploads), so
+-- publish_addendum's file check (0035) passes. Skips names already present. Test transactions only.
+create or replace function tests.stage_version_files(p_solicitation_id uuid, p_version int)
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  insert into storage.objects (bucket_id, name)
+  select 'published', format('solicitations/%s/v%s/%s', p_solicitation_id, p_version, f)
+    from unnest(array['rfb.pdf', 'bid-form.pdf', 'addendum.pdf']) f
+   where not exists (select 1 from storage.objects o where o.bucket_id = 'published'
+                       and o.name = format('solicitations/%s/v%s/%s', p_solicitation_id, p_version, f));
+$$;
+
 revoke all on function tests.make_published_solicitation(uuid, uuid, timestamptz, jsonb) from public, anon, authenticated;
 revoke all on function tests.set_bid_due(uuid, timestamptz) from public, anon, authenticated;
+grant execute on function tests.stage_version_files(uuid, int) to authenticated;
 
 
 -- A submitted bid (version 1) on an already published solicitation, inserted directly: bids, bid_versions v1

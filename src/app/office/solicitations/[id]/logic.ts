@@ -43,6 +43,17 @@ const MESSAGES: Record<string, string> = {
   invalid_paths: "The published files are not where this solicitation expects them. Try publishing again.",
   bid_due_mismatch: "The bid due time could not be confirmed. Reload the page and try again.",
   snapshot_mismatch: "The funding amount changed while publishing. Reload the page and try again.",
+  bids_closed: "Bidding has closed for this solicitation.",
+  too_close: "Bids must stay open at least 5 days after the addendum is published. Move the bid due date later.",
+  locked_field: "An addendum can't change the release date, advertising dates, newspapers or category.",
+  stale_draft: "The bid schedule changed after these prices were entered. Reload the page and enter them again.",
+  ack_missing: "This bid did not acknowledge every addendum, so it can't be accepted without a flag for the agency.",
+  questions_closed: "The deadline for questions has passed.",
+  question_not_open: "That question is no longer open. Reload the page.",
+  question_in_addendum: "That question is answered in an addendum in progress. Remove it from the addendum first.",
+  addendum_in_progress: "Another addendum for this solicitation is already in progress.",
+  narrative_required: "Describe the changes in this addendum before sending it.",
+  invalid_question: "Enter a question of up to 4,000 characters, with a reference of up to 200.",
 };
 
 /** Maps a thrown database/guard error to a user message. Unknown errors get a generic message. */

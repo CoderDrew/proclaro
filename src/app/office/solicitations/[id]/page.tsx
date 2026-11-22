@@ -6,7 +6,8 @@ import { InvalidDataPanel } from "./InvalidDataPanel";
 import { parseStoredData } from "@/domain/solicitation/schema";
 import { submissionDateOf } from "./logic";
 import { ReviewPanel, type AuditRow } from "./ReviewPanel";
-import { Page, PageHeader } from "@/components/ui";
+import { QuestionsPanel } from "./QuestionsPanel";
+import { ButtonLink, Card, DateTime, EmptyState, Page, PageHeader, StatusBadge, Table, Td, Th } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,16 @@ export default async function OfficeSolicitationPage({ params }: { params: Promi
   for (const r of [settings, holidays, acks, comments, audit, agency, officeOrgs, funding]) {
     if (r.error) throw new Error(r.error.message);
   }
+
+  // Addenda and questions: only once published, and only for office staff (both functions refuse anyone else).
+  const showAddenda = row.state === "published" && ctx.orgKind === "office";
+  const [addenda, questions] = showAddenda
+    ? await Promise.all([
+      supabase.rpc("solicitation_addenda", { p_solicitation_id: id }),
+      supabase.rpc("office_questions", { p_solicitation_id: id }),
+    ])
+    : [null, null];
+  for (const r of [addenda, questions]) if (r?.error) throw new Error(r.error.message);
 
   const staff = await supabase.from("profiles").select("user_id, display_name")
     .in("org_id", officeOrgs.data!.map((o) => o.id));
@@ -149,6 +160,42 @@ export default async function OfficeSolicitationPage({ params }: { params: Promi
         staff={staff.data.map((p) => ({ userId: p.user_id, name: p.display_name }))}
         audit={auditRows}
       />
+      {showAddenda && (
+        <>
+          <Card as="section" title="Addenda" data-testid="office-addenda-card">
+            {addenda!.data!.length === 0 ? <EmptyState>No addenda yet.</EmptyState> : (
+              <Table>
+                <thead>
+                  <tr><Th>Addendum</Th><Th>State</Th><Th>Published</Th><Th><span className="visually-hidden">Open</span></Th></tr>
+                </thead>
+                <tbody>
+                  {addenda!.data!.map((a) => (
+                    <tr key={a.id}>
+                      <Td>Addendum {a.number}</Td>
+                      <Td><StatusBadge status={{ kind: "addendum", state: a.effective_state }} /></Td>
+                      <Td>{a.published_at ? <DateTime iso={a.published_at} tz={tz} /> : "Not published"}</Td>
+                      <Td>
+                        <ButtonLink href={`/office/solicitations/${id}/addenda/${a.id}`}
+                          aria-label={`Open Addendum ${a.number} (${a.effective_state.replace("_", " ")})`}>
+                          Open
+                        </ButtonLink>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Card>
+          <QuestionsPanel
+            tz={tz}
+            questions={questions!.data!.map((q) => ({
+              id: q.id, body: q.body, reference: q.reference, askedAt: q.asked_at, status: q.status,
+              answeredInNumber: q.answered_in_number, closeReason: q.close_reason, orgName: q.org_name,
+              askerName: q.asker_name,
+            }))}
+          />
+        </>
+      )}
     </Page>
   );
 }

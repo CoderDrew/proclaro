@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { parseStoredData } from "@/domain/solicitation/schema";
 import { createServerClient } from "@/lib/supabase/server";
@@ -5,6 +6,10 @@ import { formatInstant } from "@/app/solicitations/status";
 import { ButtonLink, Notice, Page, PageHeader } from "@/components/ui";
 import { requireAgencyPage } from "../../guard";
 import { SolicitationForm } from "./SolicitationForm";
+import { acknowledgeWarning, createUploadUrl, saveDraft, submitSolicitation } from "./actions";
+import { AddendaPanel } from "./AddendaPanel";
+import { QuestionsPanel } from "./QuestionsPanel";
+import { addendumInProgress, canStartAddendum } from "./addenda/[addendumId]/logic";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +57,41 @@ export default async function SolicitationPage({ params }: { params: Promise<{ i
 
   // Display only: the bids page asks the database whether bids are closed (agency_flagged_bids raises `sealed`).
   const closed = row.state === "published" && !!row.bid_due_at && Date.now() >= new Date(row.bid_due_at).getTime();
+  const tz = settings.data!.timezone;
+
+  // Published: the addenda (effective state, through solicitation_addenda) and the questions (no identities).
+  let published: ReactNode = null;
+  if (row.state === "published") {
+    const [addenda, questions] = await Promise.all([
+      supabase.rpc("solicitation_addenda", { p_solicitation_id: id }),
+      supabase.rpc("agency_questions", { p_solicitation_id: id }),
+    ]);
+    if (addenda.error) throw new Error(addenda.error.message);
+    if (questions.error) throw new Error(questions.error.message);
+    const inProgress = addendumInProgress(addenda.data);
+    const current = addenda.data.find((a) => a.effective_state !== "published" && a.effective_state !== "withdrawn");
+    published = (
+      <div className="ui-stack">
+        <AddendaPanel
+          solicitationId={id}
+          tz={tz}
+          canStart={canStartAddendum(row.state, closed, inProgress)}
+          note={closed ? "Bids have closed, so no more addenda can be issued."
+            : current ? `Addendum ${current.number} is in progress. Only one addendum can be in progress at a time.` : null}
+          rows={addenda.data.map((a) => ({
+            id: a.id, number: a.number, effectiveState: a.effective_state, publishedAt: a.published_at,
+          }))}
+        />
+        <QuestionsPanel
+          tz={tz}
+          questions={questions.data.map((q) => ({
+            id: q.id, body: q.body, reference: q.reference, askedAt: q.asked_at, status: q.status,
+            answeredInNumber: q.answered_in_number, inDraft: q.in_draft,
+          }))}
+        />
+      </div>
+    );
+  }
 
   return (
     <Page width="full">
@@ -61,18 +101,25 @@ export default async function SolicitationPage({ params }: { params: Promise<{ i
         actions={closed ? (
           <ButtonLink href={`/agency/solicitations/${id}/bids`} data-testid="bids-link">Bids and award</ButtonLink>
         ) : row.state === "published" && row.bid_due_at ? (
-          <span className="muted">Bids are sealed until {formatInstant(row.bid_due_at, settings.data!.timezone)}</span>
+          <span className="muted">Bids are sealed until {formatInstant(row.bid_due_at, tz)}</span>
         ) : undefined}
       />
+      {published}
       <SolicitationForm
         id={id}
         initial={data}
         state={row.state}
         number={row.number}
-        tz={settings.data!.timezone}
+        tz={tz}
         holidays={holidays.data!.map((h) => h.day)}
         acks={acks.data!.map((a) => `${a.code}|${a.field ?? ""}`)}
         comments={comments.data!.map((c) => ({ field: c.field, body: c.body }))}
+        actions={{
+          save: saveDraft.bind(null, id),
+          upload: createUploadUrl.bind(null, id),
+          acknowledgeWarning: acknowledgeWarning.bind(null, id),
+          submit: submitSolicitation.bind(null, id),
+        }}
       />
     </Page>
   );

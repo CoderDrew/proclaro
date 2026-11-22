@@ -104,19 +104,25 @@ export interface FieldsProps {
     createUploadUrl: (name: string) => Promise<{ path: string; token: string }>;
     onUploaded: (added: SolicitationData["attachments"][number]) => void;
   };
+  /** Top-level data keys shown read-only (an addendum's locked fields). */
+  locked?: ReadonlySet<string>;
 }
+
+const LOCKED_HINT = "Can't change in an addendum.";
 
 /** The solicitation field groups. Controlled and shared by the agency form and the office review page. */
 export function SolicitationFields({
-  data, getLatest, onChange, editable, errors, warnings, acked, onAck, comments, req, uploads,
+  data, getLatest, onChange, editable, errors, warnings, acked, onAck, comments, req, uploads, locked,
 }: FieldsProps) {
+  const isLocked = (path: string) => locked?.has(path) ?? false;
+  const lockHint = (path: string) => (isLocked(path) ? LOCKED_HINT : undefined);
   const fieldCtx: FieldCtxValue = { errors, warnings, acked, onAck, editable, comments };
   const set = (path: string, value: unknown) => onChange(setPath(getLatest(), path, value));
   const val = (path: string) => getPath(data, path);
 
   const text = (label: string, path: string, type = "text") => (
-    <Field label={label} field={path}>
-      <input type={type} value={String(val(path) ?? "")} onChange={(e) => set(path, e.target.value)} />
+    <Field label={label} field={path} hint={lockHint(path)}>
+      <input type={type} value={String(val(path) ?? "")} disabled={isLocked(path)} onChange={(e) => set(path, e.target.value)} />
     </Field>
   );
   const area = (label: string, path: string) => (
@@ -125,8 +131,8 @@ export function SolicitationFields({
     </Field>
   );
   const dateField = (label: string, path: string) => (
-    <Field label={label} field={path}>
-      <input type="date" value={String(val(path) ?? "")} onChange={(e) => set(path, e.target.value || null)} />
+    <Field label={label} field={path} hint={lockHint(path)}>
+      <input type="date" value={String(val(path) ?? "")} disabled={isLocked(path)} onChange={(e) => set(path, e.target.value || null)} />
     </Field>
   );
   const dateTimeField = (label: string, path: "questionsDue" | "answersDue") => {
@@ -177,8 +183,8 @@ export function SolicitationFields({
               <div className="ui-field-grid ui-field-grid--auto">
                 {text("Short title (30 characters max)", "shortTitle")}
                 {text("Long title", "longTitle")}
-                <Field label="Category" field="category">
-                  <select value={data.category ?? ""} onChange={(e) => set("category", e.target.value || null)}>
+                <Field label="Category" field="category" hint={lockHint("category")}>
+                  <select value={data.category ?? ""} disabled={isLocked("category")} onChange={(e) => set("category", e.target.value || null)}>
                     <option value="">Select...</option>
                     <option value="construction">Construction</option>
                     <option value="major_maintenance">Major Maintenance</option>

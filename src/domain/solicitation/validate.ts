@@ -1,3 +1,4 @@
+import { LOCKED_FIELDS } from "../addendum/lockedFields";
 import { diffDays, isNonWorkingDay, toUtc, type LocalDate } from "../time";
 import type { AttachmentKind, SolicitationData } from "./types";
 import { BLOCKED_BELOW, PREVAILING_WAGE_AT } from "./valueBands";
@@ -7,11 +8,16 @@ export type IssueCode =
   | "date_order" | "bid_due_too_soon" | "release_too_soon" | "ad_period_too_short" | "ad_ends_after_bid_due"
   | "prebid_incomplete" | "prebid_out_of_window" | "attachment_missing"
   | "bid_due_non_working_day" | "mandatory_prebid_soon" | "placeholder_text" | "ad_starts_before_release"
-  | "funding_below_estimate";
+  | "funding_below_estimate" | "too_close" | "locked_field";
 
 /** `field` is a dotted path, e.g. "preBid.date". */
 export interface Issue { code: IssueCode; field: string; message: string }
-export interface ValidationContext { tz: string; holidays: LocalDate[]; submissionDate: LocalDate }
+interface BaseContext { tz: string; holidays: LocalDate[]; submissionDate: LocalDate }
+/**
+ * `setup` (the default) validates a solicitation before it is published. `addendum` validates an addendum's data:
+ * locked fields and the release-vs-submission rule are skipped, and bids must stay open 5 days past `now`.
+ */
+export type ValidationContext = BaseContext & ({ mode?: "setup" } | { mode: "addendum"; now: Date });
 export interface ValidationResult { errors: Issue[]; warnings: Issue[] }
 
 type Rule = (d: SolicitationData, ctx: ValidationContext) => Issue[];
@@ -26,6 +32,7 @@ const MIN_ANSWERS_TO_BID_DAYS = 5;
 const MIN_SUBMISSION_TO_RELEASE_DAYS = 3;
 const MIN_AD_DAYS = 14;
 const MANDATORY_PREBID_MIN_LEAD_DAYS = 7;
+const ADDENDUM_MIN_OPEN_MS = 5 * 24 * 60 * 60 * 1000;
 
 const issue = (code: IssueCode, field: string, message: string): Issue => ({ code, field, message });
 const blank = (v: unknown): boolean =>
@@ -189,8 +196,20 @@ const RULES: Rule[] = [
   releaseRule, adRule, adBeforeReleaseRule, preBidRule, attachmentRule, nonWorkingRule, mandatoryPreBidRule, placeholderRule,
 ];
 
+/** Addendum mode: the bid due instant must be at least 5 days after publish (judged here against ctx.now). */
+const tooCloseRule: Rule = (d, ctx) =>
+  ctx.mode === "addendum" && d.bidDueDate && d.bidDueTime &&
+  toUtc(d.bidDueDate, d.bidDueTime, ctx.tz).getTime() < ctx.now.getTime() + ADDENDUM_MIN_OPEN_MS
+    ? [issue("too_close", "bidDueDate", "Bids must stay open at least 5 days after this addendum is published.")]
+    : [];
+
+const LOCKED: ReadonlySet<string> = new Set(LOCKED_FIELDS);
+const isLocked = (i: Issue) => LOCKED.has(i.field.split(".")[0]);
+
 export function validate(data: SolicitationData, ctx: ValidationContext): ValidationResult {
-  const all = RULES.flatMap((rule) => rule(data, ctx));
+  const all = ctx.mode === "addendum"
+    ? [...RULES.filter((r) => r !== releaseRule), tooCloseRule].flatMap((rule) => rule(data, ctx)).filter((i) => !isLocked(i))
+    : RULES.flatMap((rule) => rule(data, ctx));
   return {
     errors: all.filter((i) => !WARNING_CODES.has(i.code)),
     warnings: all.filter((i) => WARNING_CODES.has(i.code)),

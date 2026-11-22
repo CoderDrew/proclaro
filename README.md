@@ -75,13 +75,13 @@ The seed inserts five published, released solicitations directly (all fictional)
 
 | Number | What it is for |
 |---|---|
-| `27-0001` | Due in 14 days, bid bond required. |
+| `27-0001` | Due in 14 days, bid bond required. Its Addendum 1 is a draft by the Corrections author that moves the bid due date 7 days later, for walking an addendum through submit, review, check and publish. The seeded solicitation has no attachments, so add the required ones (plans, specifications, sample contract, prevailing wage) to the addendum before submitting it. |
 | `27-0002` | Closes about 20 minutes after `db:reset`, so the opening can be tried locally. No bid bond. |
 | `27-0003` | Closed an hour before `db:reset`, with funding of $1,250,000.00 and two additive alternates. It has four sealed paper-bond bids for walking bid review, the recap and the award. Basalt's bond was not logged, so its bid is pending cure until 17:00 on the next business day after the `db:reset` (the cure deadline is frozen when the bid is first reviewed). Ridgeback claims residency (certificate `CR-0042`), and Granite commits apprentices. With every bid accepted and Ridgeback verified, the recap takes alternate 1 and ranks Ridgeback first by resident preference, then Granite, Juniper and Basalt. Without the verification, Granite ranks first. |
-| `27-0004` | Open for 14 days with a $1.5M estimate, so a bidder sees the apprentice commitment question. |
+| `27-0004` | Open for 14 days with a $1.5M estimate, so a bidder sees the apprentice commitment question. Addendum 1, published a day before `db:reset`, adds Item 3 to the bid schedule, so the solicitation is at version 2 (version 1 is still listed; neither version's PDFs exist). Granite submitted at version 1, so its bid shows resubmit required. Ridgeback has a draft priced against version 2 and has not acknowledged Addendum 1. The Q&A board has a question in every status: Ridgeback's, answered in Addendum 1; Granite's open one; and Granite's duplicate, closed by Reviewer One. |
 | `27-0005` | Closes about 20 minutes after `db:reset`, bid bond required. Juniper's paper-bond bid has no bond original logged, so its cure starts live at close. |
 
-Only `27-0003` has a funding amount; the others fall back to their estimate.
+Only `27-0003` has a funding amount set at publish. `27-0004`'s Addendum 1 froze its estimate as the funding amount for version 2, as publishing any addendum does; the others fall back to their estimate.
 
 ## Tour of the bid review and award slice
 

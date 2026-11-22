@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { chromium } from "playwright-core";
-import { renderBidFormHtml, renderRfbHtml } from "./renderHtml";
+import { renderAddendumHtml, renderBidFormHtml, renderRfbHtml } from "./renderHtml";
 import { chromiumRenderer, chromiumFooterHtml, extractFooterTemplate, renderPdf } from "./pdf";
 import { ctxWith } from "./testFixtures";
 
@@ -75,6 +75,7 @@ describe.skipIf(!hasChromium)("[slow] chromium PDF rendering", () => {
       legalName: "Ridge Builders", address: "1 Elm St", contact: "Ana Ridge, 555-0142, ana@example.test",
       residentClaimed: false, residentCertificate: null, reference: "K7QM-2XVD", bidVersion: 2,
       itemCents: [12_500_000, 234_567], alternateCents: [], bidBond: "paper" as const, apprenticeCommitment: null,
+      acknowledgedAddenda: [1, 2],
     };
     const pages = await pdfPages(await renderPdf(renderBidFormHtml(ctx, { draft: false, fill }), chromiumRenderer()));
     const total = pages.length;
@@ -84,6 +85,28 @@ describe.skipIf(!hasChromium)("[slow] chromium PDF rendering", () => {
     });
     const all = pages.join(" ");
     for (const t of ["$125,000.00", "$2,345.67", "$127,345.67", "Ridge Builders", "Paper original mailed"]) expect(all).toContain(t);
+    expect(all).toContain("Addenda acknowledged (list numbers) 1, 2");
+  }, 60_000);
+
+  it("addendum PDF carries the narrative, changes and answers, with the version footer on every page", async () => {
+    const html = renderAddendumHtml({
+      number: 1, version: 2, solicitationNumber: "27-0001", title: "Dormitory Roof Repair", publishedOn: "2027-06-10",
+      narrative: "Adds a third dormitory.",
+      changes: [{ kind: "item", change: "added", position: 3, after: "Dormitory C: Roof" }],
+      dateChanges: [{ field: "Bids due", before: "July 1, 2027, 1:00 PM MDT", after: "July 8, 2027, 1:00 PM MDT" }],
+      answers: [{ publishedQuestion: "Is the roof membrane specified?", answer: "Yes, see section 07 54 00." }],
+    });
+    const pages = await pdfPages(await renderPdf(html, chromiumRenderer()));
+    const total = pages.length;
+    pages.forEach((text, i) => {
+      expect(text.match(/Solicitation 27-0001 · Version 2 · Page \d+ of \d+/g)).toEqual([
+        `Solicitation 27-0001 · Version 2 · Page ${i + 1} of ${total}`,
+      ]);
+    });
+    const all = pages.join(" ");
+    for (const t of ["Addendum 1", "Adds a third dormitory.", "Item 3 added: Dormitory C: Roof", "July 8, 2027",
+      "Is the roof membrane specified?", "Yes, see section 07 54 00."]) expect(all).toContain(t);
+    expect(all).not.toContain("{n}");
   }, 60_000);
 
   it("renders the RFB without a footer template", async () => {

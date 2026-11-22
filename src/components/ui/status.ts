@@ -2,6 +2,7 @@ export type StatusTone = "success" | "danger" | "warning" | "neutral";
 
 export type DomainStatus =
   | { kind: "solicitation"; state: string }
+  | { kind: "addendum"; state: string }
   | { kind: "bidding"; status: "Open" | "Closed" }
   | { kind: "bidVersion"; status: string }
   | { kind: "original"; received: boolean }
@@ -9,7 +10,8 @@ export type DomainStatus =
   | { kind: "file"; status: string }
   | { kind: "logEntry"; flag: "afterDue" }
   | { kind: "evaluation"; stage: string; awaitingAgency: boolean }
-  | { kind: "review"; status: string };
+  | { kind: "review"; status: string }
+  | { kind: "question"; status: string };
 
 type Badge = { tone: StatusTone; label: string };
 
@@ -21,6 +23,9 @@ const SOLICITATION: Record<string, Badge> = {
   approved: { tone: "success", label: "Approved" },
   published: { tone: "success", label: "Published" },
 };
+
+// Addenda share the solicitation workflow states, plus withdrawn (also shown for an unpublished addendum after close).
+const ADDENDUM: Record<string, Badge> = { ...SOLICITATION, withdrawn: { tone: "neutral", label: "Withdrawn" } };
 
 const EVALUATION: Record<string, Badge> = {
   bid_review: { tone: "warning", label: "Bid review" },
@@ -45,6 +50,21 @@ const BID_VERSION: Record<string, StatusTone> = {
   current: "success",
   superseded: "neutral",
   withdrawn: "neutral",
+  // The latest version was entered against a schedule an addendum changed: it does not count at close.
+  not_counted: "danger",
+  // office_bid_index (0035): same meaning, seen by the office before close. An original for it counts for nothing.
+  resubmit_required: "danger",
+};
+
+const BID_VERSION_LABEL: Record<string, string> = {
+  resubmit_required: "Resubmit required (not counted)",
+};
+
+// A bidder's question; the page passes the full label (e.g. "Answered in Addendum 2", "Closed: duplicate").
+const QUESTION: Record<string, Badge> = {
+  open: { tone: "warning", label: "Open" },
+  answered: { tone: "success", label: "Answered" },
+  closed: { tone: "neutral", label: "Closed" },
 };
 
 /** A label is never blank: an empty value reads "Unknown". */
@@ -58,6 +78,8 @@ export function statusBadge(s: DomainStatus): Badge {
       return Object.hasOwn(SOLICITATION, s.state)
         ? SOLICITATION[s.state]
         : { tone: "neutral", label: readable(s.state) };
+    case "addendum":
+      return Object.hasOwn(ADDENDUM, s.state) ? ADDENDUM[s.state] : { tone: "neutral", label: readable(s.state) };
     case "bidding":
       return s.status === "Open"
         ? { tone: "success", label: "Open" }
@@ -65,7 +87,7 @@ export function statusBadge(s: DomainStatus): Badge {
     case "bidVersion":
       return {
         tone: Object.hasOwn(BID_VERSION, s.status) ? BID_VERSION[s.status] : "neutral",
-        label: readable(s.status),
+        label: Object.hasOwn(BID_VERSION_LABEL, s.status) ? BID_VERSION_LABEL[s.status] : readable(s.status),
       };
     case "original":
       return s.received
@@ -86,6 +108,8 @@ export function statusBadge(s: DomainStatus): Badge {
       return Object.hasOwn(EVALUATION, s.stage) ? EVALUATION[s.stage] : { tone: "neutral", label: readable(s.stage) };
     case "review":
       return Object.hasOwn(REVIEW, s.status) ? REVIEW[s.status] : { tone: "neutral", label: readable(s.status) };
+    case "question":
+      return Object.hasOwn(QUESTION, s.status) ? QUESTION[s.status] : { tone: "neutral", label: readable(s.status) };
     default:
       return { tone: "neutral", label: "Unknown" };
   }

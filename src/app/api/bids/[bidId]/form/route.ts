@@ -7,6 +7,7 @@ import { chromiumRenderer, renderPdf } from "@/documents/pdf";
 import { renderBidFormHtml } from "@/documents/renderHtml";
 import { toBidDraft } from "@/app/bidder/solicitations/[id]/logic";
 import { deriveRequirements } from "@/domain/solicitation/valueBands";
+import { loadAcknowledgedAddenda } from "./acknowledged";
 
 export const runtime = "nodejs";
 
@@ -39,7 +40,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   for (const r of [draft, files, company, org]) if (r.error) throw r.error;
   if (!draft.data || !company.data || !org.data) return notFound();
 
-  const fill = toBidFill(company.data, org.data.name, toBidDraft(bid.data, draft.data, files.data ?? []));
+  // The acknowledgments recorded when the form is printed fill the "Addenda acknowledged" line (spec §5). Read only
+  // once the caller is known to own an open draft: my_bid_acknowledgments is bidder-only.
+  const acknowledged = await loadAcknowledgedAddenda(supabase, bid.data.id);
+  const fill = toBidFill(company.data, org.data.name, toBidDraft(bid.data, draft.data, files.data ?? []), acknowledged);
   if ("incomplete" in fill) {
     return NextResponse.json(
       { error: "Enter every price before printing the bid form." },

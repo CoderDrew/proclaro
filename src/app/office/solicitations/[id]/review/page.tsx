@@ -96,6 +96,7 @@ export default async function OfficeReviewPage({ params }: { params: Promise<{ i
       outcomeId: r.outcome_id ?? null,
       reference: r.reference,
       version: r.version,
+      missingAddenda: r.missing_addenda ?? [],
       bidderName: r.bidder_name,
       baseTotalCents: r.base_total_cents,
       apprentice: r.apprentice_commitment ?? null,

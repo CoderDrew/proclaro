@@ -20,10 +20,17 @@ export interface BidFill {
   bidBond: BidBondChoice | null;
   /** The apprentice commitment answer; printed only on $1M+ forms. */
   apprenticeCommitment: boolean | null;
+  /** Addendum numbers this bid acknowledged online, ascending; printed on the "Addenda acknowledged" line. */
+  acknowledgedAddenda: number[];
 }
 
-/** A draft with any missing price cannot be printed; the caller answers 409. */
-export function toBidFill(company: BidderCompany, legalName: string, draft: BidDraft): BidFill | { incomplete: true } {
+/**
+ * A draft with any missing price cannot be printed; the caller answers 409. `acknowledged` is the bid's recorded
+ * acknowledgments (addendum numbers) at print time (spec §5).
+ */
+export function toBidFill(
+  company: BidderCompany, legalName: string, draft: BidDraft, acknowledged: number[],
+): BidFill | { incomplete: true } {
   const complete = (a: (Cents | null)[]): a is Cents[] => a.every((c) => c !== null);
   if (draft.itemCents.length === 0 || !complete(draft.itemCents) || !complete(draft.alternateCents)) {
     return { incomplete: true };
@@ -40,5 +47,6 @@ export function toBidFill(company: BidderCompany, legalName: string, draft: BidD
     alternateCents: draft.alternateCents,
     bidBond: draft.bidBondChoice,
     apprenticeCommitment: draft.apprenticeCommitment,
+    acknowledgedAddenda: [...new Set(acknowledged)].sort((a, b) => a - b),
   };
 }

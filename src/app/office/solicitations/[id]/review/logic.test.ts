@@ -5,7 +5,9 @@ import {
   blockerMessages, recapWords, runDisagreeRecap, runPostRecap, runPostRecapAlone, runSendRecapToCheck,
   awardControls, runDisagreeAward, runPostAward, runPostAwardAlone, runSendAwardToCheck,
   recapCheckControls, runRecallAward, runRecallRecap,
+  outcomeChoices, initialOutcome, initialNote, noteForChoice,
 } from "./logic";
+import { ackNote } from "@/domain/addendum/ack";
 
 const BID = "33333333-3333-4333-8333-333333333333";
 
@@ -410,5 +412,38 @@ describe("recall (Ruling 13)", () => {
       aloneConfirm: "Confirm: post memo publicly without a second reviewer",
       warning: "This makes the memo public, rejects every bid and can't be undone.",
     });
+  });
+});
+
+describe("missing acknowledgments", () => {
+  it("hides plain accepted only when addenda are missing", () => {
+    expect(outcomeChoices([])).toEqual(["accepted", "accepted_flagged", "non_responsive"]);
+    expect(outcomeChoices([2])).toEqual(["accepted_flagged", "non_responsive"]);
+  });
+
+  it("preselects flagged unless the office already chose non-responsive", () => {
+    expect(initialOutcome(null, [2])).toBe("accepted_flagged");
+    expect(initialOutcome("accepted", [2])).toBe("accepted_flagged");
+    expect(initialOutcome("non_responsive", [2])).toBe("non_responsive");
+    expect(initialOutcome(null, [])).toBe("");
+    expect(initialOutcome("accepted", [])).toBe("accepted");
+  });
+
+  it("prefills the fixed note for a flagged choice", () => {
+    expect(initialNote("accepted_flagged", [1, 3])).toBe(ackNote([1, 3]));
+    expect(initialNote("accepted_flagged", [1, 3])).toBe("Did not acknowledge Addendum 1, 3.");
+    expect(initialNote("non_responsive", [1])).toBe("");
+    expect(initialNote("accepted_flagged", [])).toBe("");
+  });
+
+  it("fills a blank note when flagged is chosen, but keeps typed text", () => {
+    expect(noteForChoice("accepted_flagged", "  ", [2])).toBe("Did not acknowledge Addendum 2.");
+    expect(noteForChoice("accepted_flagged", "mine", [2])).toBe("mine");
+    expect(noteForChoice("non_responsive", "", [2])).toBe("");
+    expect(noteForChoice("accepted_flagged", "", [])).toBe("");
+  });
+
+  it("words ack_missing", () => {
+    expect(reviewMessageFor(new Error("ack_missing"))).toMatch(/acknowledge/i);
   });
 });

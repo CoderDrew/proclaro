@@ -5,15 +5,23 @@ import { memoReason, parseRecap } from "@/domain/recap/snapshot";
 import { todayIn } from "@/domain/time";
 import { createServerClient } from "@/lib/supabase/server";
 import { formatInstant, onlyPublic } from "@/app/solicitations/status";
+import { missingAcknowledgments } from "@/domain/addendum/ack";
 import { Notice, Page, PageHeader } from "@/components/ui";
 import { requireBidderPage } from "../../guard";
 import { BidDraftForm, PrintBlankFormButton, StartBidButton } from "./BidDraftForm";
+import { AddendaPanel, type AddendumAckView } from "./AddendaPanel";
 import { CurePanel } from "./CurePanel";
 import { OutcomePanel } from "./OutcomePanel";
+import { QuestionsPanel } from "./QuestionsPanel";
 import { ReceiptPanel } from "./ReceiptPanel";
-import { describeReceipt, isUuid, parseBiddingState, parseCureStatus, toBidDraft, toReceipts } from "./logic";
+import {
+  addendaBanners, describeReceipt, isUuid, parseBiddingState, parseCureStatus, pricesClearedFor, questionsClosedText, questionsOpen,
+  toAcks, toAddendaStatus, toBidDraft, toMyQuestions, toReceipts,
+} from "./logic";
 
 export const dynamic = "force-dynamic";
+
+const LINK_SECONDS = 300;
 
 export default async function BidderSolicitationPage({ params }: { params: Promise<{ id: string }> }) {
   await requireBidderPage();
@@ -52,9 +60,24 @@ export default async function BidderSolicitationPage({ params }: { params: Promi
   const closed = biddingState === "closed";
   const open = biddingState === "open";
 
-  // RLS limits every bid read to the caller's own organization.
-  const bid = await supabase.from("bids").select("id, reference").eq("solicitation_id", id).maybeSingle();
+  // RLS limits every bid read to the caller's own organization. Questions are read only through my_questions
+  // (the questions table would also show same-organization colleagues' asked_by).
+  const [bid, myQuestions] = await Promise.all([
+    supabase.from("bids").select("id, reference").eq("solicitation_id", id).maybeSingle(),
+    supabase.rpc("my_questions", { p_solicitation_id: id }),
+  ]);
   if (bid.error) throw new Error(bid.error.message);
+  if (myQuestions.error) throw new Error(myQuestions.error.message);
+  // Shown or hidden by questionsDue in the configured zone; ask_question judges it on the database clock.
+  const questions = (
+    <QuestionsPanel
+      solicitationId={id}
+      questions={toMyQuestions(myQuestions.data ?? [])}
+      tz={tz}
+      canAsk={questionsOpen(data.questionsDue, tz, now, biddingState)}
+      closedText={questionsClosedText(data.questionsDue, tz)}
+    />
+  );
 
   const heading = (
     <PageHeader
@@ -70,16 +93,57 @@ export default async function BidderSolicitationPage({ params }: { params: Promi
         {heading}
         <p>Bids are due {due}.</p>
         {closed ? <p>Bidding on this solicitation has closed.</p> : open ? <StartBidButton solicitationId={id} /> : <p>This solicitation is not open for bidding.</p>}
+        {questions}
       </Page>
     );
   }
 
-  const [draft, files, receipts] = await Promise.all([
-    supabase.from("bid_drafts").select("version, item_cents, alternate_cents, bid_bond_choice, apprentice_commitment").eq("bid_id", bid.data.id).maybeSingle(),
+  const [draft, files, receipts, ackRes, statusRes] = await Promise.all([
+    supabase.from("bid_drafts")
+      .select("version, item_cents, alternate_cents, bid_bond_choice, apprentice_commitment, solicitation_version")
+      .eq("bid_id", bid.data.id).maybeSingle(),
     supabase.from("bid_draft_files").select("slot, path, file_name").eq("bid_id", bid.data.id),
     supabase.rpc("my_bid_receipts", { p_bid_id: bid.data.id }),
+    supabase.rpc("my_bid_acknowledgments", { p_bid_id: bid.data.id }),
+    supabase.rpc("my_bid_status_addenda", { p_bid_id: bid.data.id }),
   ]);
-  for (const r of [draft, files, receipts]) if (r.error) throw new Error(r.error.message);
+  for (const r of [draft, files, receipts, ackRes, statusRes]) if (r.error) throw new Error(r.error.message);
+
+  const acks = toAcks(ackRes.data ?? []);
+  const addendaStatus = toAddendaStatus(statusRes.data ?? null);
+  const resubmitRequired = addendaStatus?.resubmitRequired === true;
+  const missing = missingAcknowledgments(
+    acks.map((a) => a.addendumNumber),
+    acks.filter((a) => a.acknowledgedAt !== null).map((a) => a.addendumNumber),
+  );
+  // Each addendum's PDF is its version's addendum_path (version = number + 1), as a short-lived signed link.
+  const number = sol.data.number;
+  let addendumRows: AddendumAckView[] = [];
+  if (acks.length > 0) {
+    const versions = await supabase.rpc("solicitation_version_list", { p_solicitation_id: id });
+    if (versions.error) throw new Error(versions.error.message);
+    const pathFor = new Map((versions.data ?? []).map((v) => [v.version, (v.addendum_path as string | null) ?? null]));
+    addendumRows = await Promise.all(acks.map(async (a) => {
+      const path = pathFor.get(a.addendumNumber + 1) ?? null;
+      const signed = path
+        ? await supabase.storage.from("published")
+          .createSignedUrl(path, LINK_SECONDS, { download: `Addendum-${a.addendumNumber}-${number}.pdf` })
+        : null;
+      return {
+        number: a.addendumNumber, publishedAt: a.publishedAt, acknowledgedAt: a.acknowledgedAt,
+        pdfUrl: signed?.data?.signedUrl ?? null,
+      };
+    }));
+  }
+  const banners = addendaBanners(acks, addendaStatus, open);
+  const addenda = (
+    <>
+      {banners.map((b) => (
+        <Notice key={`${b.kind}-${b.addendum}`} tone="warning" data-testid={`banner-${b.kind}-${b.addendum}`}>{b.text}</Notice>
+      ))}
+      <AddendaPanel bidId={bid.data.id} rows={addendumRows} tz={tz} open={open} />
+    </>
+  );
 
   const rows = toReceipts(receipts.data ?? []);
   // After close, the database's cure status for the bid's latest version (before close it says not_required).
@@ -117,7 +181,10 @@ export default async function BidderSolicitationPage({ params }: { params: Promi
       due={due}
       open={open}
       hasDraft={!!draft.data}
-      receipts={rows.map((r) => ({ ...describeReceipt(r, tz), version: r.version, isCurrent: r.isCurrent, withdrawn: r.withdrawnAt !== null }))}
+      notCounted={resubmitRequired}
+      receipts={rows.map((r) => ({
+        ...describeReceipt(r, tz, resubmitRequired), version: r.version, isCurrent: r.isCurrent, withdrawn: r.withdrawnAt !== null,
+      }))}
     />
   );
 
@@ -127,9 +194,11 @@ export default async function BidderSolicitationPage({ params }: { params: Promi
         {heading}
         <p>Bid reference: <strong>{bid.data.reference}</strong></p>
         <p>Bids are due {due}.{closed && " Bidding on this solicitation has closed."}</p>
+        {addenda}
         {cure}
         {outcome}
         {rows.length === 0 ? <p>This bid has no submitted version.</p> : panel}
+        {questions}
       </Page>
     );
   }
@@ -138,13 +207,19 @@ export default async function BidderSolicitationPage({ params }: { params: Promi
   return (
     <Page width="full">
       {heading}
+      {addenda}
       {cure}
       {outcome}
       {panel}
       <BidDraftForm
+        // A new key after a schedule change remounts the form, so its inputs follow the new schedule.
+        key={`${bidDraft.version}:${draft.data.solicitation_version}`}
         bidId={bidDraft.bidId}
         reference={bidDraft.reference}
         version={bidDraft.version}
+        solicitationVersion={draft.data.solicitation_version}
+        pricesCleared={pricesClearedFor(addendaStatus, open)}
+        missingAcknowledgments={missing}
         due={due}
         readOnly={!open}
         rules={{
@@ -160,6 +235,7 @@ export default async function BidderSolicitationPage({ params }: { params: Promi
           files: bidDraft.files,
         }}
       />
+      {questions}
     </Page>
   );
 }

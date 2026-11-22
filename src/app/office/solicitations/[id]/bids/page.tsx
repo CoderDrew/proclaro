@@ -111,11 +111,14 @@ async function openingSection(
     }
     throw new Error(opened.error.message);
   }
-  const [files, review] = await Promise.all([
+  const [files, review, stale] = await Promise.all([
     supabase.rpc("opened_bid_files", { p_solicitation_id: id }),
     // Only for each bid's bond cure status, so the bond label does not contradict a cure made after close.
     supabase.rpc("review_bids", { p_solicitation_id: id }),
+    // Bids priced against an older schedule are not counted; no prices are shown here.
+    supabase.rpc("stale_bids", { p_solicitation_id: id }),
   ]);
+  if (stale.error) throw new Error(stale.error.message);
   if (files.error) throw new Error(files.error.message);
   if (review.error) throw new Error(review.error.message);
   const cures = Object.fromEntries(review.data.map((r) => [r.bid_id, r.cure_status]));
@@ -143,6 +146,23 @@ async function openingSection(
           Review bids
         </ButtonLink>
       </div>
+      {stale.data.length > 0 ? (
+        <Card as="section" title="Not counted: resubmit required" data-testid="stale-bids">
+          <p className="muted ui-office-note">
+            These bids were priced against an earlier bid schedule and are not opened or counted.
+          </p>
+          <Table>
+            <thead><tr><Th>Reference</Th><Th>Bidder</Th><Th>Priced against version</Th></tr></thead>
+            <tbody>
+              {stale.data.map((b) => (
+                <tr key={b.bid_id} data-testid={`stale-${b.reference}`}>
+                  <Td>{b.reference}</Td><Td>{b.bidder_legal_name}</Td><Td>{b.solicitation_version}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </Card>
+      ) : null}
       <Card as="section" title="Tabulation (internal)">
         <p className="muted ui-office-note">
           Computed from the submitted prices. Ordered by base total. Not for posting.

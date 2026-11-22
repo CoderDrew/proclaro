@@ -5,6 +5,8 @@ import { MAX_PRICE_CENTS, type BidBondChoice, type BidDraft, type BidIssue, type
 import { validateBidDraft } from "@/domain/bid/validate";
 import type { SolicitationData } from "@/domain/solicitation/types";
 import { formatInstant } from "@/app/solicitations/status";
+import { formatDateTime } from "@/documents/format";
+import { toUtc } from "@/domain/time";
 import { safeFileName } from "@/app/agency/solicitations/[id]/logic";
 
 export type BidActionResult<T = object> = ({ ok: true } & T) | { ok: false; message: string };
@@ -26,6 +28,9 @@ const MSG = {
   pathSubmitted: "That file was already submitted with an earlier version. Choose the file again to upload a fresh copy.",
   storageRefused: "That upload was not accepted. Bidding may have closed. Reload the page.",
   storageExists: "That file was already uploaded. Choose the file again.",
+  staleDraft: "An addendum changed the bid schedule. Reload the page and enter your prices again.",
+  questionsClosed: "The deadline for questions has passed.",
+  invalidQuestion: "Enter a question of 1 to 4,000 characters and a reference of up to 200.",
   generic: "Something went wrong. Try again.",
 } as const;
 const KNOWN_MESSAGES = new Set<string>(Object.values(MSG));
@@ -46,6 +51,9 @@ export function bidMessageFor(e: unknown): string {
     case "not_found": return MSG.notFound;
     case "not_authorized": return MSG.notAuthorized;
     case "path_already_submitted": return MSG.pathSubmitted;
+    case "stale_draft": return MSG.staleDraft;
+    case "questions_closed": return MSG.questionsClosed;
+    case "invalid_question": return MSG.invalidQuestion;
     case "invalid_upload_path":
     case "invalid_upload_slot": return MSG.upload;
   }
@@ -116,16 +124,33 @@ function displayFileName(name: string): string {
 // Prices
 // ---------------------------------------------------------------------------
 export interface PriceDeps {
+  /** The draft's current solicitation_version, or null when there is no draft row the caller can see. */
+  draftVersion(): Promise<number | null>;
   /** The number of items and alternates in the solicitation's published schedule, or null when invisible. */
   schedule(): Promise<{ items: number; alternates: number } | null>;
   /** Writes the parsed prices to the draft (RLS and the open-time policy do the enforcing). */
   save(items: (Cents | null)[], alternates: (Cents | null)[]): Promise<void>;
 }
 
-/** Validates against the stored schedule (never client counts), then saves. */
+/** A price save refused because the page was loaded before a schedule change reset the draft (R13). */
+export type SavePricesResult = BidActionResult | { ok: false; stale: true; message: string };
+
+/**
+ * Validates against the stored schedule (never client counts), then saves. `solicitationVersion` is the draft's
+ * version the page loaded: if the draft has moved on (an addendum changed the schedule and publish reset it), the
+ * save is refused without writing, so prices typed against the old schedule never land in the reset draft. A
+ * publish between this read and the write can still slip through (accepted TOCTOU window; submit_bid's
+ * stale_draft guard still holds).
+ */
 export async function runSavePrices(
-  input: { items: string[]; alternates: string[] }, deps: PriceDeps,
-): Promise<BidActionResult> {
+  input: { items: string[]; alternates: string[]; solicitationVersion: number }, deps: PriceDeps,
+): Promise<SavePricesResult> {
+  if (!Number.isInteger(input.solicitationVersion)) throw new Error("invalid_state");
+  const current = await deps.draftVersion();
+  if (current !== null && current !== input.solicitationVersion) {
+    if (current < 2) throw new Error("invalid_state");
+    return { ok: false, stale: true, message: pricesClearedNotice(current - 1) };
+  }
   const schedule = await deps.schedule();
   if (!schedule) throw new Error("not_found");
   const items = parsePriceInputs(input.items, schedule.items, "Item");
@@ -294,10 +319,11 @@ export async function runSubmitBid(
 }
 
 /** One receipt row: its line (time, reference, version; never prices) and its status. */
-export function describeReceipt(r: BidReceipt, tz: string): { line: string; status: string } {
+export function describeReceipt(r: BidReceipt, tz: string, notCounted = false): { line: string; status: string } {
   return {
     line: `Version ${r.version} · submitted ${formatInstant(r.submittedAt, tz)} · reference ${r.reference}`,
-    status: r.withdrawnAt ? `withdrawn ${formatInstant(r.withdrawnAt, tz)}` : r.isCurrent ? "current" : "superseded",
+    status: r.withdrawnAt ? `withdrawn ${formatInstant(r.withdrawnAt, tz)}`
+      : r.isCurrent ? (notCounted ? "Not counted" : "current") : "superseded",
   };
 }
 
@@ -383,4 +409,135 @@ export async function runSubmitCureBond(
 ): Promise<BidActionResult<{ uploadedAt: string }>> {
   assertOwnBidPath(bidId, path);
   return { ok: true, uploadedAt: await deps.submit(bidId, path, displayFileName(fileName)) };
+}
+
+// ---------------------------------------------------------------------------
+// Addenda, acknowledgments and resubmit required (slice 2c)
+// ---------------------------------------------------------------------------
+export const resubmitBanner = (n: number) => `Resubmit required: Addendum ${n} changed the bid schedule.`;
+export const acknowledgeBanner = (n: number) => `Addendum ${n} published. Acknowledge it before bids close.`;
+export const pricesClearedNotice = (n: number) =>
+  `Addendum ${n} changed the bid schedule, so your prices were cleared. Enter them again.`;
+export const SUBMIT_ACK_WARNING = "Bids that don't acknowledge every addendum are flagged for the agency at close.";
+
+/** One published addendum and whether this bid acknowledged it (my_bid_acknowledgments). */
+export interface AckRow { addendumNumber: number; publishedAt: string | null; acknowledgedAt: string | null }
+/** my_bid_status_addenda's row. */
+export interface AddendaStatus { resubmitRequired: boolean; scheduleChangedIn: number | null; draftClearedBy: number | null }
+export interface Banner { kind: "resubmit" | "acknowledge"; addendum: number; text: string }
+
+/** my_bid_acknowledgments rows. The generated type says the timestamps are strings; acknowledged_at is null until acknowledged. */
+export function toAcks(rows: { addendum_number: number; published_at: string; acknowledged_at: string }[]): AckRow[] {
+  return rows.map((r) => ({
+    addendumNumber: r.addendum_number,
+    publishedAt: (r.published_at as string | null) ?? null,
+    acknowledgedAt: (r.acknowledged_at as string | null) ?? null,
+  }));
+}
+
+/** my_bid_status_addenda's single row (its ints are null when nothing applies), or null when none came back. */
+export function toAddendaStatus(
+  rows: { resubmit_required: boolean; schedule_changed_in: number; draft_cleared_by: number }[] | null,
+): AddendaStatus | null {
+  const r = rows?.[0];
+  if (!r) return null;
+  return {
+    resubmitRequired: r.resubmit_required === true,
+    scheduleChangedIn: (r.schedule_changed_in as number | null) ?? null,
+    draftClearedBy: (r.draft_cleared_by as number | null) ?? null,
+  };
+}
+
+/**
+ * The banners above the bid while bidding is open: resubmit required first (keyed on resubmit_required only:
+ * schedule_changed_in is also set for a withdrawn stale version), then one per unacknowledged addendum. None
+ * after close, when neither can be acted on.
+ */
+export function addendaBanners(acks: AckRow[], status: AddendaStatus | null, open: boolean): Banner[] {
+  if (!open) return [];
+  const out: Banner[] = [];
+  if (status?.resubmitRequired && status.scheduleChangedIn !== null) {
+    out.push({ kind: "resubmit", addendum: status.scheduleChangedIn, text: resubmitBanner(status.scheduleChangedIn) });
+  }
+  for (const a of acks) {
+    if (a.acknowledgedAt === null) {
+      out.push({ kind: "acknowledge", addendum: a.addendumNumber, text: acknowledgeBanner(a.addendumNumber) });
+    }
+  }
+  return out;
+}
+
+/** The prices-cleared notice above the price inputs, while they can still be entered. */
+export function pricesClearedFor(status: AddendaStatus | null, open: boolean): string | null {
+  return open && status?.draftClearedBy != null ? pricesClearedNotice(status.draftClearedBy) : null;
+}
+
+/** Acknowledges a published addendum; the database checks the bid, the addendum and the clock. */
+export async function runAcknowledge(
+  bidId: string, addendumNumber: number, deps: { acknowledge(bidId: string, n: number): Promise<void> },
+): Promise<BidActionResult> {
+  if (!isUuid(bidId) || !Number.isInteger(addendumNumber) || addendumNumber < 1) throw new Error("not_found");
+  await deps.acknowledge(bidId, addendumNumber);
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Questions (slice 2c)
+// ---------------------------------------------------------------------------
+export const QUESTION_MAX = 4000;
+export const REFERENCE_MAX = 200;
+
+/** One row of public.my_questions: the caller's organization's own questions. */
+export interface MyQuestion {
+  id: string; body: string; reference: string; askedAt: string; status: string;
+  answeredInNumber: number | null; closeReason: string | null;
+}
+
+export function toMyQuestions(rows: {
+  id: string; body: string; reference: string; asked_at: string; status: string; answered_in_number: number; close_reason: string;
+}[]): MyQuestion[] {
+  return rows.map((r) => ({
+    id: r.id, body: r.body, reference: r.reference, askedAt: r.asked_at, status: r.status,
+    answeredInNumber: (r.answered_in_number as number | null) ?? null,
+    closeReason: (r.close_reason as string | null) ?? null,
+  }));
+}
+
+const CLOSE_REASONS: Record<string, string> = { duplicate: "duplicate", out_of_scope: "out of scope" };
+
+/** The status badge text for one of the bidder's questions. */
+export function bidderQuestionStatus(q: Pick<MyQuestion, "status" | "answeredInNumber" | "closeReason">): string {
+  if (q.status === "answered") return q.answeredInNumber ? `Answered in Addendum ${q.answeredInNumber}` : "Answered";
+  if (q.status === "closed") return q.closeReason ? `Closed: ${CLOSE_REASONS[q.closeReason] ?? q.closeReason}` : "Closed";
+  return "Open";
+}
+
+/**
+ * Whether to show the ask form: before questionsDue (in the configured zone) and before bidding closes. This only
+ * chooses what to show; ask_question judges the deadline on the database clock and refuses with questions_closed.
+ */
+export function questionsOpen(
+  due: { date: string; time: string } | null, tz: string, now: Date, state: BiddingState,
+): boolean {
+  if (!due || state === "closed") return false;
+  return now.getTime() < toUtc(due.date, due.time, tz).getTime();
+}
+
+export function questionsClosedText(due: { date: string; time: string } | null, tz: string): string {
+  return due ? `Questions closed ${formatDateTime(due, tz)}` : "Questions closed";
+}
+
+/** Trims and bounds the question (1 to 4,000 characters) and reference (up to 200), then asks the database. */
+export async function runAskQuestion(
+  solicitationId: string, input: { body: string; reference: string },
+  deps: { ask(solicitationId: string, body: string, reference: string): Promise<string> },
+): Promise<BidActionResult> {
+  if (!isUuid(solicitationId)) throw new Error("not_found");
+  const body = String(input?.body ?? "").trim();
+  const reference = String(input?.reference ?? "").trim();
+  if (body.length < 1 || body.length > QUESTION_MAX || reference.length > REFERENCE_MAX) {
+    return { ok: false, message: MSG.invalidQuestion };
+  }
+  await deps.ask(solicitationId, body, reference);
+  return { ok: true };
 }
