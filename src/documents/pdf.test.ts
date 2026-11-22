@@ -115,3 +115,12 @@ describe.skipIf(!hasChromium)("[slow] chromium PDF rendering", () => {
     expect(pages.join(" ")).toContain("DRAFT — NOT FOR BIDDING");
   }, 60_000);
 });
+
+describe("onServerless", () => {
+  it("is true only on Vercel or Lambda", async () => {
+    const { onServerless } = await import("./pdf");
+    expect(onServerless({ VERCEL: "1" })).toBe(true);
+    expect(onServerless({ AWS_LAMBDA_FUNCTION_NAME: "f" })).toBe(true);
+    expect(onServerless({})).toBe(false);
+  });
+});

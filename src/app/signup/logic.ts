@@ -15,3 +15,5 @@ export function validateSignup(
   }
   return { email: e, password: checked.password };
 }
+
+export const SIGNUP_CLOSED_MESSAGE = "New accounts can't be created on this site. Sign in with one of the demo accounts.";

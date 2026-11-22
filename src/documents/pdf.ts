@@ -40,10 +40,24 @@ export async function renderPdf(html: string, renderer: PdfRenderer): Promise<Ui
   return renderer.render(html, { footerTemplate: template ? chromiumFooterHtml(template) : undefined });
 }
 
+/**
+ * On Vercel (no browser in the function image) launch the serverless Chromium build; everywhere else, the Chromium
+ * installed by `npx playwright-core install chromium`.
+ */
+export function onServerless(env: Record<string, string | undefined> = process.env): boolean {
+  return env.VERCEL === "1" || !!env.AWS_LAMBDA_FUNCTION_NAME;
+}
+
+async function launchBrowser() {
+  if (!onServerless()) return chromium.launch();
+  const { default: serverless } = await import("@sparticuz/chromium");
+  return chromium.launch({ executablePath: await serverless.executablePath(), args: serverless.args, headless: true });
+}
+
 export function chromiumRenderer(): PdfRenderer {
   return {
     async render(html, { footerTemplate }) {
-      const browser = await chromium.launch();
+      const browser = await launchBrowser();
       try {
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: "load" });

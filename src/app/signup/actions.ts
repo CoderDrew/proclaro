@@ -2,11 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
-import { validateSignup } from "./logic";
+import { signupClosed } from "@/lib/demo";
+import { SIGNUP_CLOSED_MESSAGE, validateSignup } from "./logic";
 
 export type SignUpState = { error?: string; notice?: string } | undefined;
 
 export async function signUp(_prev: SignUpState, formData: FormData): Promise<SignUpState> {
+  if (signupClosed(process.env)) return { error: SIGNUP_CLOSED_MESSAGE };
   const checked = validateSignup(formData.get("email"), formData.get("password"), formData.get("confirm"));
   if ("error" in checked) return { error: checked.error };
 

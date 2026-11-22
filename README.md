@@ -107,3 +107,36 @@ After close, office staff can run an AI check of each bid's documents on the bid
 2. **`/office/solicitations/{id}/review`**: a procurement reviewer sets each bid's outcome (with a note), verifies resident certificates and sends flagged bids to the agency. Then they send the recap (or the all-bids-rejected memo) to check, and a second office user, who did not review these bids, posts it. After the agency picks the award, the office sends it to check and a second user posts it. Every post asks for confirmation. The sender can recall a recap or award under check (for example when nobody else may check it) and then post it alone, which is recorded. Once the recap is sent to check, originals can't be voided or logged and cure bonds can't be uploaded.
 3. **`/agency/solicitations/{id}/bids`**: the agency author decides each flagged bid (reference, reviewer's note and base total only) and picks the award from the posted recap, with a reason when the pick isn't the expected award.
 4. **`/solicitations/{number}`**: the posted recap or memo and the award are public.
+
+## Hosting
+
+The hosted site runs on Vercel (the Next.js app) and Supabase Cloud (database, storage, auth). On Vercel, PDF rendering
+uses the serverless Chromium package `@sparticuz/chromium`; everywhere else it uses the Chromium from
+`npx playwright-core install chromium`.
+
+**Demo accounts.** The hosted database uses the seeded users, but not the public local password:
+`npm run hosted:reset` seeds from a temporary copy of `supabase/seed.sql` with `DEMO_PASSWORD` in its place.
+
+**Vercel environment.** Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+and `SITE_URL` (the site's origin). Also set:
+
+- `DEMO_PASSWORD` to the same password as `.env.hosted`, so the sign-in page lists the demo accounts;
+- `SIGNUP_CLOSED=1`, so no one can create an account.
+
+Never set `DEV_EMAIL_LOGIN`. Leave `AI_CHECK_ENABLED` unset, because every visitor can reach an office login.
+
+**Supabase Auth settings (dashboard).**
+
+- Turn off "Allow new users to sign up".
+- Set Site URL to the site's origin.
+- Add `<origin>/auth/confirm` to the redirect URLs.
+
+**Reset.** Visitors share the data. To restore the seed:
+
+1. Link the project once with `npx supabase link`.
+2. Put `HOSTED_SUPABASE_URL`, `HOSTED_ANON_KEY`, `HOSTED_SERVICE_ROLE_KEY` and `DEMO_PASSWORD` in `.env.hosted`
+   (git-ignored).
+3. Run `npm run hosted:reset`.
+
+The reset reruns the migrations and the seed, uploads the seed files, and fails loudly if the public local password
+still signs in.

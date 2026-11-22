@@ -1,5 +1,6 @@
 -- Local development seed. All names are fictional.
--- Password `proclaro-dev` is for the local stack only; never use it anywhere else.
+-- Password `proclaro-dev` is for the local stack only; never use it anywhere else. The hosted reset
+-- (scripts/hosted-reset.mjs) seeds from a temporary copy with DEMO_PASSWORD in its place.
 
 insert into public.settings (id, state_name, office_name, timezone, fiscal_year_start_month)
 values (1, 'State of Calder', 'Calder State Construction Office', 'America/Denver', 7)

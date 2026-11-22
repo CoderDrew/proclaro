@@ -1,8 +1,9 @@
-// Local development only: uploads the AI check fixture PDFs to the paths supabase/seed.sql gives 27-0003's bids
+// Uploads the AI check fixture PDFs to the paths supabase/seed.sql gives 27-0003's bids
 // (insurance certificates and scans), so the recorded check results open real documents. Run after `npm run db:reset`.
 //
-// It uses the LOCAL service key from `supabase status` and refuses any API URL that isn't 127.0.0.1 or localhost. It is
-// a seeding script, never app code: the app never touches bid files with the service key.
+// By default it uses the LOCAL service key from `supabase status` and refuses any API URL that isn't 127.0.0.1 or
+// localhost. With --hosted it uses HOSTED_SUPABASE_URL and HOSTED_SERVICE_ROLE_KEY instead (scripts/hosted-reset.mjs).
+// It is a seeding script, never app code: the app never touches bid files with the service key.
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -42,8 +43,15 @@ function fixtureFor(path) {
   return null;
 }
 
+function hostedEnv() {
+  const url = process.env.HOSTED_SUPABASE_URL;
+  const key = process.env.HOSTED_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("--hosted needs HOSTED_SUPABASE_URL and HOSTED_SERVICE_ROLE_KEY.");
+  return { url, key };
+}
+
 async function main() {
-  const { url, key } = localEnv();
+  const { url, key } = process.argv.includes("--hosted") ? hostedEnv() : localEnv();
   const storage = createClient(url, key, { auth: { persistSession: false } }).storage.from("bid-files");
   const paths = (await listAll(storage, "bids")).filter((p) => fixtureFor(p));
   if (paths.length === 0) throw new Error("No seeded AI check paths found. Run `npm run db:reset` first.");

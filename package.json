@@ -15,10 +15,12 @@
     "db:types": "supabase gen types typescript --local > src/lib/supabase/database.types.ts",
     "aicheck:fixtures": "node scripts/aicheck-fixtures.mjs",
     "seed:files": "node scripts/seed-files.mjs",
-    "aicheck:eval": "vitest run --config vitest.eval.config.ts"
+    "aicheck:eval": "vitest run --config vitest.eval.config.ts",
+    "hosted:reset": "node --env-file=.env.hosted scripts/hosted-reset.mjs"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
+    "@sparticuz/chromium": "^153.0.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.0",
     "date-fns": "^4.4.0",
