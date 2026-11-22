@@ -51,3 +51,6 @@ next-env.d.ts
 
 # Temporary seed copy written by scripts/hosted-reset.mjs
 supabase/.hosted-seed.sql
+
+# Local Claude Code settings and worktrees
+.claude/
